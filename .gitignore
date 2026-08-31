@@ -1,0 +1,16 @@
+# Dependency dan coverage artifacts dibuat hanya oleh authorized future work.
+node_modules/
+coverage/
+
+# Runtime state tidak boleh masuk Git.
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+
+# Local environment dan secret material tidak boleh disimpan di repository.
+.env
+.env.*
+*.key
+*.pem
+*.crt

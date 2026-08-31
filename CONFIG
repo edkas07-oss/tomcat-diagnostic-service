@@ -1,0 +1,14 @@
+# Metadata non-secret untuk baseline Tomcat Diagnostic Service.
+#
+# File ini dibaca oleh static validator dan akan menjadi input lifecycle script
+# pada TN berikutnya. Jangan menambahkan credential, certificate, target host,
+# atau nilai environment-specific ke file ini.
+
+# Toolchain aplikasi yang telah diterima melalui TM-ADR-0013.
+NODE_VERSION=24.18.0
+MODULE_TYPE=module
+
+# Identitas image lokal bersifat metadata rencana. Build belum diotorisasi dan
+# immutable identity base image tetap harus diterima sebelum build pertama.
+IMAGE_NAME=localhost/tomcat-diagnostic-service
+BASE_IMAGE=localhost/nodejs:24.18.0

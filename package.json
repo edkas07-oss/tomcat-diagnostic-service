@@ -1,0 +1,13 @@
+{
+  "name": "tomcat-diagnostic-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bounded deterministic diagnostic service for the Tomcat Monitoring pilot",
+  "type": "module",
+  "scripts": {
+    "validate": "bash scripts/validate.sh"
+  },
+  "engines": {
+    "node": "24.18.0"
+  }
+}
