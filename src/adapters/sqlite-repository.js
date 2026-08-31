@@ -99,6 +99,26 @@ export class SqliteRepository {
       .run(succeeded ? "completed" : "failed", new Date().toISOString(), queueId);
   }
 
+  eventForQueue(queueId) {
+    const row = this.database.prepare(`SELECT e.*, i.environment, i.host, i.tomcat_instance FROM work_queue q JOIN events e ON e.id=q.event_id JOIN incidents i ON i.fingerprint=e.fingerprint WHERE q.id=?`).get(queueId);
+    if (!row) throw new RangeError("queue item not found");
+    const labels = JSON.parse(row.labels_json);
+    return { eventKey: row.event_key, fingerprint: row.fingerprint, status: row.status, startsAt: row.status === "firing" ? row.event_time : null, endsAt: row.status === "resolved" ? row.event_time : null, targetId: `${row.environment}/${row.host}/${row.tomcat_instance}`, generation: null, labels };
+  }
+
+  saveCanonicalResult(queueId, result) {
+    const eventId = this.database.prepare("SELECT event_id FROM work_queue WHERE id=?").get(queueId)?.event_id;
+    const inserted = this.database.prepare(`INSERT INTO canonical_results(event_id, diagnostic_id, schema_version, processing_status, classification, confidence, result_hash, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(eventId, result.diagnosticId, result.schemaVersion, result.processingStatus, result.assessment.classification, result.assessment.confidence, result.resultHash, JSON.stringify(result), result.timing.completedAt);
+    const resultId = Number(inserted.lastInsertRowid);
+    for (const evidence of result.evidence) this.database.prepare("INSERT INTO evidence_summaries(result_id,evidence_id,source,status,summary_json) VALUES(?,?,?,?,?)").run(resultId, evidence.evidenceId, evidence.source, evidence.status, JSON.stringify(evidence));
+  }
+
+  reserveMaterialUpdate(fingerprint) {
+    const result = this.database.prepare("UPDATE incidents SET material_update_count=1 WHERE fingerprint=? AND material_update_count=0").run(fingerprint);
+    return Number(result.changes) === 1;
+  }
+
   close() {
     this.database.close();
   }

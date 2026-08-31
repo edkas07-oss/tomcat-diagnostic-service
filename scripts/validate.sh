@@ -52,6 +52,7 @@ required_files=(
     package-lock.json
     config/schemas/alertmanager-webhook-v4.schema.json
     migrations/001-initial.sql
+    migrations/002-canonical-results.sql
     src/adapters/application-health-adapter.js
     src/adapters/bounded-file-reader.js
     src/adapters/collector-spool-adapter.js
@@ -60,8 +61,12 @@ required_files=(
     src/adapters/sqlite-repository.js
     src/application/bounded-queue.js
     src/application/ingest-alertmanager.js
+    src/application/diagnostic-worker.js
+    src/application/health-metrics.js
+    src/application/result-renderer.js
     src/application/target-registry.js
     src/domain/evidence.js
+    src/domain/canonical-result.js
     src/domain/tomcat-down-engine.js
     src/server/webhook-schema.js
     scripts/validate.sh
