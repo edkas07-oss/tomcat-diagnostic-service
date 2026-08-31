@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tomcat-monitoring.local/schemas/alertmanager-webhook-v4.schema.json",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["version", "groupKey", "status", "receiver", "alerts"],
+  "properties": {
+    "version": { "const": "4" },
+    "groupKey": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["firing", "resolved"] },
+    "receiver": { "type": "string", "minLength": 1 },
+    "alerts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["status", "labels", "annotations", "startsAt", "endsAt", "fingerprint"],
+        "properties": {
+          "status": { "enum": ["firing", "resolved"] },
+          "labels": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "required": ["alertname", "severity", "environment", "host", "tomcat_instance", "job", "instance", "service", "check"],
+            "properties": {
+              "alertname": { "const": "TomcatDown" },
+              "severity": { "const": "critical" },
+              "environment": { "type": "string", "minLength": 1 },
+              "host": { "type": "string", "minLength": 1 },
+              "tomcat_instance": { "type": "string", "minLength": 1 },
+              "job": { "const": "tomcat-jmx-exporter" },
+              "instance": { "type": "string", "minLength": 1 },
+              "service": { "const": "tomcat" },
+              "check": { "const": "runtime-availability" },
+              "application": { "type": "string", "minLength": 1 }
+            }
+          },
+          "annotations": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "startsAt": { "type": "string", "format": "date-time" },
+          "endsAt": { "type": "string", "format": "date-time" },
+          "fingerprint": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

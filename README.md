@@ -6,10 +6,11 @@ evidence yang dibatasi, menyimpan lifecycle diagnosis pada SQLite, dan
 membentuk notification content. Service tidak melakukan automatic remediation
 atau mengendalikan container Tomcat.
 
-Baseline saat ini hanya menyediakan governance, metadata dependency-free, dan
-static validation. HTTP ingestion, persistence, diagnostic engine, evidence
-adapter, notification renderer, image lifecycle, dan runtime belum
-diimplementasikan atau diverifikasi.
+Source saat ini menyediakan schema webhook Alertmanager v4, migration SQLite,
+durable event ingestion, deduplication, serta queue persisten berkapasitas 50.
+Target registry, bounded evidence adapters, dan deterministic `TomcatDown`
+decision table juga tersedia. HTTP/TLS server, notification renderer, image
+lifecycle, dan runtime belum diimplementasikan atau diverifikasi.
 
 ## Batas Tanggung Jawab
 
@@ -32,10 +33,9 @@ change, atau tindakan pemulihan otomatis.
 - reusable base image `localhost/nodejs:24.18.0`, dengan immutable build
   identity ditetapkan sebelum image build dijalankan.
 
-Exact JSON Schema validator dan SMTP client belum dipilih. Baseline ini tidak
-memasang dependency aplikasi dan tidak memerlukan akses network.
+JSON Schema memakai exact-pinned `ajv@8.20.0`. SMTP client belum dipilih.
 
-## Struktur Baseline
+## Struktur Source
 
 ```text
 tomcat-diagnostic-service/
@@ -44,15 +44,15 @@ tomcat-diagnostic-service/
 ├── PROJECT            Identitas project yang dapat dibaca script
 ├── README.md          Contract dan status implementasi
 ├── VERSION            Versi aplikasi baseline
-├── package.json       Contract package ESM dependency-free
-├── package-lock.json  Dependency lock baseline
+├── package.json       Contract package ESM dan Ajv
+├── package-lock.json  Dependency lock
+├── config/schemas/    Versioned webhook schema
+├── migrations/        Forward-only SQLite migration
+├── src/               Ingestion, queue, dan SQLite adapter
+├── test/              Unit dan temporary-SQLite integration test
 └── scripts/
     └── validate.sh    Static validation tanpa network atau container
 ```
-
-Direktori `config/schemas`, `migrations`, `src`, dan `test` dibuat pada TN
-implementasi pemiliknya ketika sudah memiliki artifact nyata. Placeholder
-directory tidak digunakan hanya untuk merepresentasikan rencana.
 
 ## Static Validation
 
@@ -63,8 +63,8 @@ Jalankan dari root repository:
 ```
 
 Validator memeriksa file wajib, metadata project dan package, exact Node.js
-engine, dependency baseline, shell syntax, larangan framework/ORM/host-control
-dependency, serta pola assignment secret yang tidak boleh masuk source.
+engine dan Ajv, shell syntax, larangan framework/ORM/host-control dependency,
+serta pola assignment secret yang tidak boleh masuk source.
 Validator tidak membuktikan application behavior, SQLite durability, image
 build, HTTPS, authentication, runtime health, atau monitoring integration.
 
@@ -72,11 +72,14 @@ build, HTTPS, authentication, runtime health, atau monitoring integration.
 
 | Capability | Status |
 | --- | --- |
-| Repository governance | Implemented in source; not committed |
-| Project and package metadata | Implemented in source; dependency-free |
+| Repository governance | Committed baseline |
+| Project and package metadata | Implemented; exact-pinned Ajv |
 | Static validation interface | Implemented in source |
-| Application source and tests | Not implemented |
-| SQLite migrations and persistence | Not implemented |
+| Schema, durable ingestion, and queue | Implemented in source |
+| SQLite migration and restart deduplication tests | Implemented in source |
+| Target isolation and bounded evidence adapters | Implemented in source |
+| `TomcatDown` TD-01 through TD-08 engine | Implemented in source |
+| HTTP server and diagnostic orchestration | Not implemented |
 | Image build and component runtime | Not implemented |
 | Monitoring integration and end-to-end flow | Not implemented |
 

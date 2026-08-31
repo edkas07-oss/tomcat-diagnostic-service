@@ -50,6 +50,20 @@ required_files=(
     CONFIG
     package.json
     package-lock.json
+    config/schemas/alertmanager-webhook-v4.schema.json
+    migrations/001-initial.sql
+    src/adapters/application-health-adapter.js
+    src/adapters/bounded-file-reader.js
+    src/adapters/collector-spool-adapter.js
+    src/adapters/local-file-evidence-adapter.js
+    src/adapters/prometheus-adapter.js
+    src/adapters/sqlite-repository.js
+    src/application/bounded-queue.js
+    src/application/ingest-alertmanager.js
+    src/application/target-registry.js
+    src/domain/evidence.js
+    src/domain/tomcat-down-engine.js
+    src/server/webhook-schema.js
     scripts/validate.sh
 )
 
@@ -101,7 +115,11 @@ require(package_json.get("engines", {}).get("node") == expected_node,
         "package.json Node.js engine tidak konsisten")
 require(package_json.get("scripts", {}).get("validate") == "bash scripts/validate.sh",
         "validate script tidak konsisten")
-require(not package_json.get("dependencies"), "baseline tidak boleh memiliki dependency")
+require(package_json.get("scripts", {}).get("test") ==
+        "node --test test/unit/*.test.js test/integration/*.test.js",
+        "test script tidak konsisten")
+require(package_json.get("dependencies") == {"ajv": "8.20.0"},
+        "hanya exact-pinned Ajv 8.20.0 yang diizinkan")
 require(not package_json.get("devDependencies"), "baseline tidak boleh memiliki devDependency")
 require(package_lock.get("lockfileVersion") == 3,
         "package-lock.json harus memakai lockfileVersion 3")
@@ -113,6 +131,8 @@ require(root_lock.get("version") == expected_version,
         "root lock package version tidak konsisten")
 require(root_lock.get("engines", {}).get("node") == expected_node,
         "root lock Node.js engine tidak konsisten")
+require(root_lock.get("dependencies") == {"ajv": "8.20.0"},
+        "root lock dependency tidak konsisten")
 PYTHON
 
 for shell_script in "${PROJECT_ROOT}"/scripts/*.sh; do
@@ -124,10 +144,15 @@ if rg -n --glob 'package*.json' "${forbidden_dependencies}" "${PROJECT_ROOT}"; t
     fail "framework, ORM, atau general-purpose host-control dependency ditemukan"
 fi
 
+forbidden_imports='(node:child_process|node:cluster|node:worker_threads|podman|docker\.sock)'
+if rg -n --glob '*.js' "${forbidden_imports}" "${PROJECT_ROOT}/src"; then
+    fail "host-control atau unapproved concurrency interface ditemukan"
+fi
+
 secret_assignment='(password|passwd|secret|token|api[_-]?key|private[_-]?key)[[:space:]]*[:=][[:space:]]*["'"'][^<][^"'"']+["'"']'
 if rg -n -i --glob '!AGENTS.md' --glob '!README.md' --glob '!scripts/validate.sh' \
     "${secret_assignment}" "${PROJECT_ROOT}"; then
     fail "kemungkinan secret assignment ditemukan pada source baseline"
 fi
 
-echo "Static validation passed: governance and dependency-free baseline are consistent."
+echo "Static validation passed: schema, migration, source, and dependency boundaries are consistent."

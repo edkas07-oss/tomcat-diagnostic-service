@@ -5,7 +5,11 @@
   "description": "Bounded deterministic diagnostic service for the Tomcat Monitoring pilot",
   "type": "module",
   "scripts": {
-    "validate": "bash scripts/validate.sh"
+    "validate": "bash scripts/validate.sh",
+    "test": "node --test test/unit/*.test.js test/integration/*.test.js"
+  },
+  "dependencies": {
+    "ajv": "8.20.0"
   },
   "engines": {
     "node": "24.18.0"
