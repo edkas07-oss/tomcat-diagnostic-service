@@ -53,12 +53,14 @@ required_files=(
     config/schemas/alertmanager-webhook-v4.schema.json
     migrations/001-initial.sql
     migrations/002-canonical-results.sql
+    migrations/003-delivery-attempts.sql
     src/adapters/application-health-adapter.js
     src/adapters/bounded-file-reader.js
     src/adapters/collector-spool-adapter.js
     src/adapters/local-file-evidence-adapter.js
     src/adapters/prometheus-adapter.js
     src/adapters/sqlite-repository.js
+    src/adapters/smtp-adapter.js
     src/application/bounded-queue.js
     src/application/ingest-alertmanager.js
     src/application/diagnostic-worker.js
@@ -69,6 +71,7 @@ required_files=(
     src/domain/canonical-result.js
     src/domain/tomcat-down-engine.js
     src/server/webhook-schema.js
+    src/server/http-service.js
     scripts/validate.sh
 )
 
@@ -123,8 +126,11 @@ require(package_json.get("scripts", {}).get("validate") == "bash scripts/validat
 require(package_json.get("scripts", {}).get("test") ==
         "node --test test/unit/*.test.js test/integration/*.test.js",
         "test script tidak konsisten")
-require(package_json.get("dependencies") == {"ajv": "8.20.0"},
-        "hanya exact-pinned Ajv 8.20.0 yang diizinkan")
+require(package_json.get("scripts", {}).get("test:component") ==
+        "node --test test/component/*.test.js",
+        "component test script tidak konsisten")
+require(package_json.get("dependencies") == {"ajv": "8.20.0", "nodemailer": "9.0.6"},
+        "hanya exact-pinned Ajv dan Nodemailer yang diizinkan")
 require(not package_json.get("devDependencies"), "baseline tidak boleh memiliki devDependency")
 require(package_lock.get("lockfileVersion") == 3,
         "package-lock.json harus memakai lockfileVersion 3")
@@ -136,7 +142,7 @@ require(root_lock.get("version") == expected_version,
         "root lock package version tidak konsisten")
 require(root_lock.get("engines", {}).get("node") == expected_node,
         "root lock Node.js engine tidak konsisten")
-require(root_lock.get("dependencies") == {"ajv": "8.20.0"},
+require(root_lock.get("dependencies") == {"ajv": "8.20.0", "nodemailer": "9.0.6"},
         "root lock dependency tidak konsisten")
 PYTHON
 

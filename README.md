@@ -8,12 +8,11 @@ atau mengendalikan container Tomcat.
 
 Source saat ini menyediakan schema webhook Alertmanager v4, migration SQLite,
 durable event ingestion, deduplication, serta queue persisten berkapasitas 50.
-Target registry, bounded evidence adapters, dan deterministic `TomcatDown`
-decision table juga tersedia. HTTP/TLS server, notification renderer, image
-decision table juga tersedia. Single-worker orchestration, canonical-result
-persistence, health/metrics model, dan seven-section renderers telah ditambahkan.
-HTTP/TLS server, SMTP delivery, image lifecycle, dan runtime belum
-diimplementasikan atau diverifikasi.
+Target registry, bounded evidence adapters, deterministic `TomcatDown` decision
+table, single worker, canonical-result persistence, health/metrics model, dan
+seven-section renderers juga tersedia. HTTPS request boundary dan SMTP adapter
+telah lulus ephemeral socket component tests. Image lifecycle, persistent
+runtime, Mailpit integration, dan end-to-end flow belum diverifikasi.
 
 ## Batas Tanggung Jawab
 

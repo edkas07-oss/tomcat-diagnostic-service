@@ -119,6 +119,10 @@ export class SqliteRepository {
     return Number(result.changes) === 1;
   }
 
+  recordNotificationAttempt(resultId, attempt, status, errorCode = null) {
+    this.database.prepare("INSERT INTO notification_attempts(result_id,attempt,status,error_code,attempted_at) VALUES(?,?,?,?,?)").run(resultId, attempt, status, errorCode, new Date().toISOString());
+  }
+
   close() {
     this.database.close();
   }
