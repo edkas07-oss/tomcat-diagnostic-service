@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tomcat-monitoring.invalid/schemas/diagnostic-application-config-v1.schema.json",
+  "title": "Tomcat Diagnostic Service application configuration v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "listen", "databasePath", "tls", "bearerTokenFile", "targetAllowlistFile", "smtp", "queue", "timeouts", "requestLimitBytes"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "listen": {
+      "type": "object", "additionalProperties": false, "required": ["host", "port"],
+      "properties": { "host": { "type": "string", "minLength": 1 }, "port": { "type": "integer", "minimum": 0, "maximum": 65535 } }
+    },
+    "databasePath": { "type": "string", "minLength": 1 },
+    "tls": {
+      "type": "object", "additionalProperties": false, "required": ["certificateFile", "privateKeyFile"],
+      "properties": { "certificateFile": { "type": "string", "minLength": 1 }, "privateKeyFile": { "type": "string", "minLength": 1 } }
+    },
+    "bearerTokenFile": { "type": "string", "minLength": 1 },
+    "targetAllowlistFile": { "type": "string", "minLength": 1 },
+    "smtp": {
+      "type": "object", "additionalProperties": false,
+      "required": ["host", "port", "secure", "from", "to"],
+      "properties": {
+        "host": { "type": "string", "minLength": 1 },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "secure": { "type": "boolean" },
+        "from": { "type": "string", "minLength": 3 },
+        "to": { "type": "string", "minLength": 3 },
+        "usernameFile": { "type": "string", "minLength": 1 },
+        "passwordFile": { "type": "string", "minLength": 1 }
+      },
+      "dependentRequired": { "usernameFile": ["passwordFile"], "passwordFile": ["usernameFile"] }
+    },
+    "queue": {
+      "type": "object", "additionalProperties": false, "required": ["capacity", "pollIntervalMs"],
+      "properties": { "capacity": { "type": "integer", "minimum": 1, "maximum": 10000 }, "pollIntervalMs": { "type": "integer", "minimum": 10, "maximum": 60000 } }
+    },
+    "timeouts": {
+      "type": "object", "additionalProperties": false, "required": ["diagnosticMs", "smtpMs", "shutdownMs"],
+      "properties": {
+        "diagnosticMs": { "type": "integer", "minimum": 100, "maximum": 300000 },
+        "smtpMs": { "type": "integer", "minimum": 100, "maximum": 60000 },
+        "shutdownMs": { "type": "integer", "minimum": 100, "maximum": 60000 }
+      }
+    },
+    "requestLimitBytes": { "type": "integer", "minimum": 1024, "maximum": 1048576 }
+  }
+}

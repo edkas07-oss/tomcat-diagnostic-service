@@ -51,6 +51,7 @@ required_files=(
     package.json
     package-lock.json
     config/schemas/alertmanager-webhook-v4.schema.json
+    config/schemas/application-config-v1.schema.json
     migrations/001-initial.sql
     migrations/002-canonical-results.sql
     migrations/003-delivery-attempts.sql
@@ -62,6 +63,8 @@ required_files=(
     src/adapters/sqlite-repository.js
     src/adapters/smtp-adapter.js
     src/application/bounded-queue.js
+    src/application/application.js
+    src/application/config-loader.js
     src/application/ingest-alertmanager.js
     src/application/diagnostic-worker.js
     src/application/health-metrics.js
@@ -72,6 +75,7 @@ required_files=(
     src/domain/tomcat-down-engine.js
     src/server/webhook-schema.js
     src/server/http-service.js
+    src/main.js
     scripts/validate.sh
 )
 
@@ -123,12 +127,16 @@ require(package_json.get("engines", {}).get("node") == expected_node,
         "package.json Node.js engine tidak konsisten")
 require(package_json.get("scripts", {}).get("validate") == "bash scripts/validate.sh",
         "validate script tidak konsisten")
+require(package_json.get("scripts", {}).get("start") == "node src/main.js",
+        "start script tidak konsisten")
 require(package_json.get("scripts", {}).get("test") ==
         "node --test test/unit/*.test.js test/integration/*.test.js",
         "test script tidak konsisten")
 require(package_json.get("scripts", {}).get("test:component") ==
         "node --test test/component/*.test.js",
         "component test script tidak konsisten")
+require(package_json.get("bin", {}).get("tomcat-diagnostic-service") == "src/main.js",
+        "startup entrypoint tidak konsisten")
 require(package_json.get("dependencies") == {"ajv": "8.20.0", "nodemailer": "9.0.6"},
         "hanya exact-pinned Ajv dan Nodemailer yang diizinkan")
 require(not package_json.get("devDependencies"), "baseline tidak boleh memiliki devDependency")
@@ -140,6 +148,8 @@ require(package_lock.get("version") == expected_version,
 require(root_lock.get("name") == expected_name, "root lock package name tidak konsisten")
 require(root_lock.get("version") == expected_version,
         "root lock package version tidak konsisten")
+require(root_lock.get("bin", {}).get("tomcat-diagnostic-service") == "src/main.js",
+        "root lock startup entrypoint tidak konsisten")
 require(root_lock.get("engines", {}).get("node") == expected_node,
         "root lock Node.js engine tidak konsisten")
 require(root_lock.get("dependencies") == {"ajv": "8.20.0", "nodemailer": "9.0.6"},

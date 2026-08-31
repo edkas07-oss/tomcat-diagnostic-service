@@ -4,7 +4,11 @@
   "private": true,
   "description": "Bounded deterministic diagnostic service for the Tomcat Monitoring pilot",
   "type": "module",
+  "bin": {
+    "tomcat-diagnostic-service": "src/main.js"
+  },
   "scripts": {
+    "start": "node src/main.js",
     "validate": "bash scripts/validate.sh",
     "test": "node --test test/unit/*.test.js test/integration/*.test.js",
     "test:component": "node --test test/component/*.test.js"

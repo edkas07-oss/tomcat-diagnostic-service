@@ -11,8 +11,11 @@ durable event ingestion, deduplication, serta queue persisten berkapasitas 50.
 Target registry, bounded evidence adapters, deterministic `TomcatDown` decision
 table, single worker, canonical-result persistence, health/metrics model, dan
 seven-section renderers juga tersedia. HTTPS request boundary dan SMTP adapter
-telah lulus ephemeral socket component tests. Image lifecycle, persistent
-runtime, Mailpit integration, dan end-to-end flow belum diverifikasi.
+telah lulus ephemeral socket component tests. Versioned application
+configuration, mounted-file secret loading, startup lifecycle, single worker
+loop, dan Prometheus text serialization tersedia pada source.
+Image lifecycle, persistent runtime, Mailpit integration, dan end-to-end flow
+belum diverifikasi.
 
 ## Batas Tanggung Jawab
 
@@ -35,7 +38,8 @@ change, atau tindakan pemulihan otomatis.
 - reusable base image `localhost/nodejs:24.18.0`, dengan immutable build
   identity ditetapkan sebelum image build dijalankan.
 
-JSON Schema memakai exact-pinned `ajv@8.20.0`. SMTP client belum dipilih.
+JSON Schema memakai exact-pinned `ajv@8.20.0`; SMTP memakai exact-pinned
+`nodemailer@9.0.6`.
 
 ## Struktur Source
 
@@ -48,7 +52,7 @@ tomcat-diagnostic-service/
 ├── VERSION            Versi aplikasi baseline
 ├── package.json       Contract package ESM dan Ajv
 ├── package-lock.json  Dependency lock
-├── config/schemas/    Versioned webhook schema
+├── config/schemas/    Versioned webhook dan application configuration schema
 ├── migrations/        Forward-only SQLite migration
 ├── src/               Ingestion, queue, dan SQLite adapter
 ├── test/              Unit dan temporary-SQLite integration test
@@ -70,6 +74,27 @@ serta pola assignment secret yang tidak boleh masuk source.
 Validator tidak membuktikan application behavior, SQLite durability, image
 build, HTTPS, authentication, runtime health, atau monitoring integration.
 
+## Application Configuration dan Startup
+
+Jalankan aplikasi dengan satu absolute configuration path:
+
+```bash
+npm start -- --config /run/tomcat-diagnostic/application.json
+```
+
+`application-config-v1.schema.json` menentukan database path, listen address,
+TLS certificate/private-key file, bearer-token file, target-allowlist file,
+SMTP endpoint dan optional credential files, queue, timeout, serta request
+limit. JSON application configuration tidak boleh berisi token, password,
+certificate, atau private key. Nilai sensitif dibaca saat startup dari mounted
+file yang direferensikan menggunakan absolute normalized path.
+
+Startup memvalidasi seluruh input, membuka SQLite dan menjalankan forward-only
+migration, memulai HTTPS, mengubah readiness menjadi ready, lalu menjalankan
+tepat satu sequential diagnostic worker loop. `SIGTERM` dan `SIGINT`
+menghentikan request acceptance dan readiness sebelum server/worker dihentikan;
+database ditutup terakhir.
+
 ## Status Implementasi
 
 | Capability | Status |
@@ -81,7 +106,8 @@ build, HTTPS, authentication, runtime health, atau monitoring integration.
 | SQLite migration and restart deduplication tests | Implemented in source |
 | Target isolation and bounded evidence adapters | Implemented in source |
 | `TomcatDown` TD-01 through TD-08 engine | Implemented in source |
-| HTTP server and diagnostic orchestration | Not implemented |
+| Versioned application configuration | Implemented in source |
+| HTTP server and diagnostic orchestration | Implemented in source; persistent runtime not verified |
 | Image build and component runtime | Not implemented |
 | Monitoring integration and end-to-end flow | Not implemented |
 
