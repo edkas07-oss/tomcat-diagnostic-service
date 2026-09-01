@@ -4,10 +4,12 @@ import { fileURLToPath } from "node:url";
 import { SqliteRepository } from "../adapters/sqlite-repository.js";
 import { BoundedWorkQueue } from "./bounded-queue.js";
 import { DiagnosticWorker } from "./diagnostic-worker.js";
+import { NotificationDelivery } from "./notification-delivery.js";
 import { HealthMetrics, serializePrometheus } from "./health-metrics.js";
 import { targetKey } from "./ingest-alertmanager.js";
 import { createHttpsService } from "../server/http-service.js";
 import { createWebhookValidator } from "../server/webhook-schema.js";
+import { SmtpAdapter } from "../adapters/smtp-adapter.js";
 
 export class DiagnosticApplication {
   constructor(config, dependencies = {}) {
@@ -25,7 +27,12 @@ export class DiagnosticApplication {
       const queue = this.dependencies.queue ?? new BoundedWorkQueue(this.repository, { capacity: this.config.queue.capacity });
       const validate = this.dependencies.webhookValidator ?? createWebhookValidator(join(projectRoot, "config/schemas/alertmanager-webhook-v4.schema.json"));
       const allowedTargets = new Set([...this.config.targetRegistry.targets.values()].map(({ identity }) => targetKey(identity)));
-      this.worker = this.dependencies.worker ?? new DiagnosticWorker(this.repository, this.dependencies.collectEvidence ?? (async () => []), { timeoutMs: this.config.timeouts.diagnosticMs });
+      if (this.dependencies.worker) this.worker = this.dependencies.worker;
+      else {
+        const smtp = this.dependencies.smtp ?? new SmtpAdapter(this.config.smtp);
+        const notification = this.dependencies.notification ?? new NotificationDelivery(this.repository, smtp, { health: this.health });
+        this.worker = new DiagnosticWorker(this.repository, this.dependencies.collectEvidence ?? (async () => []), { timeoutMs: this.config.timeouts.diagnosticMs, notification });
+      }
       this.server = this.dependencies.server ?? createHttpsService(this.config.tls, {
         token: this.config.bearerToken,
         health: this.health,

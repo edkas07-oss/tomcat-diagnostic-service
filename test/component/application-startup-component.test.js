@@ -28,6 +28,6 @@ test("configuration starts HTTPS after SQLite migration and shuts down cleanly",
   await application.shutdown();
   assert.equal(application.accepting, false); assert.equal(application.health.health().ready, false);
   const database = new DatabaseSync(raw.databasePath, { readOnly: true });
-  assert.deepEqual(database.prepare("SELECT version FROM schema_migrations ORDER BY version").all().map(({ version }) => version), [1, 2, 3]);
+  assert.deepEqual(database.prepare("SELECT version FROM schema_migrations ORDER BY version").all().map(({ version }) => version), [1, 2, 3, 4]);
   database.close();
 });

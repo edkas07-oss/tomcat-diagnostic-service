@@ -57,6 +57,7 @@ required_files=(
     migrations/001-initial.sql
     migrations/002-canonical-results.sql
     migrations/003-delivery-attempts.sql
+    migrations/004-notification-lifecycle.sql
     src/adapters/application-health-adapter.js
     src/adapters/bounded-file-reader.js
     src/adapters/collector-spool-adapter.js
@@ -70,6 +71,7 @@ required_files=(
     src/application/ingest-alertmanager.js
     src/application/diagnostic-worker.js
     src/application/health-metrics.js
+    src/application/notification-delivery.js
     src/application/result-renderer.js
     src/application/target-registry.js
     src/domain/evidence.js

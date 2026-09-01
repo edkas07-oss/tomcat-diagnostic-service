@@ -100,10 +100,10 @@ export class SqliteRepository {
   }
 
   eventForQueue(queueId) {
-    const row = this.database.prepare(`SELECT e.*, i.environment, i.host, i.tomcat_instance FROM work_queue q JOIN events e ON e.id=q.event_id JOIN incidents i ON i.fingerprint=e.fingerprint WHERE q.id=?`).get(queueId);
+    const row = this.database.prepare(`SELECT e.*, i.environment, i.host, i.tomcat_instance, i.first_firing_at FROM work_queue q JOIN events e ON e.id=q.event_id JOIN incidents i ON i.fingerprint=e.fingerprint WHERE q.id=?`).get(queueId);
     if (!row) throw new RangeError("queue item not found");
     const labels = JSON.parse(row.labels_json);
-    return { eventKey: row.event_key, fingerprint: row.fingerprint, status: row.status, startsAt: row.status === "firing" ? row.event_time : null, endsAt: row.status === "resolved" ? row.event_time : null, targetId: `${row.environment}/${row.host}/${row.tomcat_instance}`, generation: null, labels };
+    return { eventKey: row.event_key, fingerprint: row.fingerprint, status: row.status, startsAt: row.status === "firing" ? row.event_time : row.first_firing_at, endsAt: row.status === "resolved" ? row.event_time : null, targetId: `${row.environment}/${row.host}/${row.tomcat_instance}`, generation: null, labels };
   }
 
   saveCanonicalResult(queueId, result) {
@@ -112,6 +112,14 @@ export class SqliteRepository {
       .run(eventId, result.diagnosticId, result.schemaVersion, result.processingStatus, result.assessment.classification, result.assessment.confidence, result.resultHash, JSON.stringify(result), result.timing.completedAt);
     const resultId = Number(inserted.lastInsertRowid);
     for (const evidence of result.evidence) this.database.prepare("INSERT INTO evidence_summaries(result_id,evidence_id,source,status,summary_json) VALUES(?,?,?,?,?)").run(resultId, evidence.evidenceId, evidence.source, evidence.status, JSON.stringify(evidence));
+    return resultId;
+  }
+
+  latestCanonicalResult(fingerprint, lifecycleStatus = null) {
+    const row = this.database.prepare(`SELECT c.result_json FROM canonical_results c JOIN events e ON e.id=c.event_id
+      WHERE e.fingerprint=? AND (? IS NULL OR e.status=?) ORDER BY c.id DESC LIMIT 1`)
+      .get(fingerprint, lifecycleStatus, lifecycleStatus);
+    return row ? JSON.parse(row.result_json) : null;
   }
 
   reserveMaterialUpdate(fingerprint) {
@@ -119,8 +127,21 @@ export class SqliteRepository {
     return Number(result.changes) === 1;
   }
 
-  recordNotificationAttempt(resultId, attempt, status, errorCode = null) {
-    this.database.prepare("INSERT INTO notification_attempts(result_id,attempt,status,error_code,attempted_at) VALUES(?,?,?,?,?)").run(resultId, attempt, status, errorCode, new Date().toISOString());
+  reserveResolvedNotification(fingerprint) {
+    const result = this.database.prepare("UPDATE incidents SET resolved_notification_count=1 WHERE fingerprint=? AND resolved_notification_count=0").run(fingerprint);
+    return Number(result.changes) === 1;
+  }
+
+  beginNotificationAttempt(resultId, attempt) {
+    this.database.prepare("INSERT INTO notification_attempts(result_id,attempt,status,error_code,attempted_at) VALUES(?,?,'pending',NULL,?)")
+      .run(resultId, attempt, new Date().toISOString());
+  }
+
+  finishNotificationAttempt(resultId, attempt, status, errorCode = null) {
+    if (!["sent", "failed"].includes(status)) throw new TypeError("invalid notification status");
+    const updated = this.database.prepare("UPDATE notification_attempts SET status=?, error_code=?, attempted_at=? WHERE result_id=? AND attempt=? AND status='pending'")
+      .run(status, errorCode, new Date().toISOString(), resultId, attempt);
+    if (Number(updated.changes) !== 1) throw new RangeError("notification attempt is not pending");
   }
 
   close() {

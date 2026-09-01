@@ -160,10 +160,12 @@ Exact values, host modes, ownership, disposable multi-component topology, dan
 cleanup gate berada pada handbook
 `diagnostic-mvp/runtime-configuration-and-verification-contract.md`.
 
-SMTP adapter dan renderer tersedia, tetapi startup worker pada revision ini
-belum menghubungkan canonical result ke SMTP delivery. Mailpit delivery dan
-notification retry tidak boleh diklaim terverifikasi sampai source-owned
-orchestration tersebut diimplementasikan dan diuji.
+Source terbaru menghubungkan canonical result, renderer, SQLite attempt state,
+dan SMTP adapter melalui satu worker. Policy pilot memakai maksimum tiga
+attempts, backoff 1 dan 5 detik, maximum age 60 detik, serta existing queue
+berkapasitas 50 tanpa queue kedua. Source dan ephemeral SMTP socket tests telah
+lulus; image digest di atas masih artifact TN-010 dan belum membawa perubahan
+source TN-012. Mailpit serta persistent runtime tetap belum diverifikasi.
 
 ## Status Implementasi
 
@@ -178,6 +180,7 @@ orchestration tersebut diimplementasikan dan diuji.
 | `TomcatDown` TD-01 through TD-08 engine | Implemented in source |
 | Versioned application configuration | Implemented in source |
 | HTTP server and diagnostic orchestration | Implemented in source; persistent runtime not verified |
+| Notification lifecycle and bounded SMTP retry | Implemented in source; Mailpit/runtime not verified |
 | Application image build and disposable component runtime | Verified in source; image digest `sha256:a849a9e39a49ffcacb11733b0ad19e5e5f29c10451f8fd284f2b218f71c2dff1` |
 | Monitoring integration and end-to-end flow | Not implemented |
 
