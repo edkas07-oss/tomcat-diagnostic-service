@@ -127,6 +127,44 @@ berisi `server.crt` dan `server.key`:
 Script menghapus exact test container melalui trap, tetapi caller tetap
 bertanggung jawab menghapus temporary directory setelah evidence dicatat.
 
+## Runtime Consumption Contract
+
+Integration runtime harus mengonsumsi image menggunakan exact digest, bukan
+tag mutable:
+
+```text
+localhost/tomcat-diagnostic-service@sha256:a849a9e39a49ffcacb11733b0ad19e5e5f29c10451f8fd284f2b218f71c2dff1
+```
+
+Application JSON dipasang read-only pada
+`/run/tomcat-diagnostic/application.json`. File tersebut menunjuk exact
+container paths berikut:
+
+| Artifact | Container path | Access |
+| --- | --- | --- |
+| Target allowlist | `/run/tomcat-diagnostic/config/targets.json` | Read-only |
+| TLS certificate | `/run/tomcat-diagnostic/tls/server.crt` | Read-only |
+| TLS private key | `/run/tomcat-diagnostic/tls/server.key` | Read-only |
+| Bearer token | `/run/tomcat-diagnostic/secrets/bearer-token` | Read-only |
+| Optional SMTP username/password | `/run/tomcat-diagnostic/secrets/smtp-username` and `smtp-password` | Read-only |
+| SQLite directory | `/var/lib/tomcat-diagnostic` | Read-write |
+| SQLite database | `/var/lib/tomcat-diagnostic/diagnostic.db` | Runtime-created |
+
+Image berjalan sebagai user `node`. Runtime owner wajib membuktikan user
+tersebut dapat membaca mounted inputs dan membuat serta mengunci SQLite pada
+exact image digest. Configuration, allowlist, certificate, dan secret tetap
+dimiliki integration/non-Git storage; repository ini hanya memiliki schema,
+loader, migration, dan application lifecycle.
+
+Exact values, host modes, ownership, disposable multi-component topology, dan
+cleanup gate berada pada handbook
+`diagnostic-mvp/runtime-configuration-and-verification-contract.md`.
+
+SMTP adapter dan renderer tersedia, tetapi startup worker pada revision ini
+belum menghubungkan canonical result ke SMTP delivery. Mailpit delivery dan
+notification retry tidak boleh diklaim terverifikasi sampai source-owned
+orchestration tersebut diimplementasikan dan diuji.
+
 ## Status Implementasi
 
 | Capability | Status |
