@@ -44,6 +44,8 @@ require_command rg
 
 required_files=(
     AGENTS.md
+    .containerignore
+    Containerfile
     README.md
     PROJECT
     VERSION
@@ -76,6 +78,9 @@ required_files=(
     src/server/webhook-schema.js
     src/server/http-service.js
     src/main.js
+    scripts/build.sh
+    scripts/test-image.sh
+    scripts/test-image-component.sh
     scripts/validate.sh
 )
 
@@ -99,8 +104,10 @@ project_version="$(<"${PROJECT_ROOT}/VERSION")"
     || fail "MODULE_TYPE harus bernilai module"
 [[ "${IMAGE_NAME}" == "localhost/tomcat-diagnostic-service" ]] \
     || fail "IMAGE_NAME tidak konsisten dengan project identity"
-[[ "${BASE_IMAGE}" == "localhost/nodejs:${NODE_VERSION}" ]] \
-    || fail "BASE_IMAGE harus mengikuti exact accepted Node.js version"
+[[ "${BASE_IMAGE}" == "localhost/nodejs@sha256:76b1444d507be3398f3196f37bd20f7a97a703871ed2716fa91a1a9520fc482d" ]] \
+    || fail "BASE_IMAGE harus memakai immutable Node.js digest TN-010"
+[[ "${BASE_IMAGE_ID}" == "bccb45bc1e48a07ac6c2cd36f7352bccb555e8b3e6070cbefa727d83d6dee3bc" ]] \
+    || fail "BASE_IMAGE_ID tidak konsisten dengan immutable local base"
 
 python3 - "${PROJECT_ROOT}" "${project_name}" "${project_version}" "${NODE_VERSION}" <<'PYTHON'
 import json
@@ -154,6 +161,37 @@ require(root_lock.get("engines", {}).get("node") == expected_node,
         "root lock Node.js engine tidak konsisten")
 require(root_lock.get("dependencies") == {"ajv": "8.20.0", "nodemailer": "9.0.6"},
         "root lock dependency tidak konsisten")
+PYTHON
+
+python3 - "${PROJECT_ROOT}" "${BASE_IMAGE}" "${BASE_IMAGE_ID}" <<'PYTHON'
+import pathlib
+import sys
+
+project_root = pathlib.Path(sys.argv[1])
+base_image, base_image_id = sys.argv[2:]
+containerfile = (project_root / "Containerfile").read_text()
+containerignore = (project_root / ".containerignore").read_text().splitlines()
+
+
+def require(condition, message):
+    if not condition:
+        raise SystemExit(message)
+
+
+require(f"ARG BASE_IMAGE={base_image}" in containerfile,
+        "Containerfile base digest tidak konsisten")
+require("USER node" in containerfile, "Containerfile harus memakai non-root user node")
+require('CMD ["node", "src/main.js", "--config", "/run/tomcat-diagnostic/application.json"]' in containerfile,
+        "Containerfile startup command tidak konsisten")
+require("COPY --chown=node:node src /app/src" in containerfile,
+        "Containerfile harus menyalin runtime source sebagai user node")
+require("npm ci --omit=dev --ignore-scripts --no-audit --no-fund" in containerfile,
+        "Containerfile harus memasang exact locked production dependencies")
+for required_pattern in [".git", "test", "node_modules", "*.key", "*.crt", "*.pem", "*.sqlite*"]:
+    require(required_pattern in containerignore,
+            f".containerignore belum memuat boundary: {required_pattern}")
+require(base_image_id in (project_root / "CONFIG").read_text(),
+        "CONFIG tidak memuat immutable base image ID")
 PYTHON
 
 for shell_script in "${PROJECT_ROOT}"/scripts/*.sh; do

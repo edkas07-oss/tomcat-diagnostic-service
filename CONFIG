@@ -8,7 +8,7 @@
 NODE_VERSION=24.18.0
 MODULE_TYPE=module
 
-# Identitas image lokal bersifat metadata rencana. Build belum diotorisasi dan
-# immutable identity base image tetap harus diterima sebelum build pertama.
+# Identitas application image dan immutable local base yang dibuktikan TN-010.
 IMAGE_NAME=localhost/tomcat-diagnostic-service
-BASE_IMAGE=localhost/nodejs:24.18.0
+BASE_IMAGE=localhost/nodejs@sha256:76b1444d507be3398f3196f37bd20f7a97a703871ed2716fa91a1a9520fc482d
+BASE_IMAGE_ID=bccb45bc1e48a07ac6c2cd36f7352bccb555e8b3e6070cbefa727d83d6dee3bc

@@ -14,8 +14,9 @@ seven-section renderers juga tersedia. HTTPS request boundary dan SMTP adapter
 telah lulus ephemeral socket component tests. Versioned application
 configuration, mounted-file secret loading, startup lifecycle, single worker
 loop, dan Prometheus text serialization tersedia pada source.
-Image lifecycle, persistent runtime, Mailpit integration, dan end-to-end flow
-belum diverifikasi.
+Application image lifecycle memakai immutable local Node.js base digest pada
+TN-010. Persistent runtime, Mailpit integration, dan end-to-end flow belum
+diverifikasi.
 
 ## Batas Tanggung Jawab
 
@@ -47,6 +48,7 @@ JSON Schema memakai exact-pinned `ajv@8.20.0`; SMTP memakai exact-pinned
 tomcat-diagnostic-service/
 ├── AGENTS.md          Governance dan repository boundary
 ├── CONFIG             Metadata toolchain non-secret
+├── Containerfile      Digest-pinned application image
 ├── PROJECT            Identitas project yang dapat dibaca script
 ├── README.md          Contract dan status implementasi
 ├── VERSION            Versi aplikasi baseline
@@ -57,6 +59,9 @@ tomcat-diagnostic-service/
 ├── src/               Ingestion, queue, dan SQLite adapter
 ├── test/              Unit dan temporary-SQLite integration test
 └── scripts/
+    ├── build.sh       Build versioned dan latest local image
+    ├── test-image.sh  Static runtime/image contract probes
+    ├── test-image-component.sh  Disposable HTTPS/SQLite/signal test
     └── validate.sh    Static validation tanpa network atau container
 ```
 
@@ -95,6 +100,33 @@ tepat satu sequential diagnostic worker loop. `SIGTERM` dan `SIGINT`
 menghentikan request acceptance dan readiness sebelum server/worker dihentikan;
 database ditutup terakhir.
 
+## Image Lifecycle
+
+`CONFIG` mem-pin reusable local base menggunakan OCI digest dan image ID.
+Build menolak base dengan identity berbeda, memasang dependency dari
+`package-lock.json`, dan menghasilkan dua tag lokal:
+
+```bash
+./scripts/build.sh
+./scripts/test-image.sh
+```
+
+Image menggunakan user `node`, working directory `/app`, port deklaratif
+`8443`, serta startup command yang membaca
+`/run/tomcat-diagnostic/application.json`. Certificate, private key, bearer
+token, allowlist, dan SQLite database tidak berada di image; seluruhnya harus
+diberikan melalui mount runtime.
+
+Disposable image-level verification memerlukan exact temporary directory yang
+berisi `server.crt` dan `server.key`:
+
+```bash
+./scripts/test-image-component.sh /tmp/tomcat-diagnostic-component
+```
+
+Script menghapus exact test container melalui trap, tetapi caller tetap
+bertanggung jawab menghapus temporary directory setelah evidence dicatat.
+
 ## Status Implementasi
 
 | Capability | Status |
@@ -108,7 +140,7 @@ database ditutup terakhir.
 | `TomcatDown` TD-01 through TD-08 engine | Implemented in source |
 | Versioned application configuration | Implemented in source |
 | HTTP server and diagnostic orchestration | Implemented in source; persistent runtime not verified |
-| Image build and component runtime | Not implemented |
+| Application image build and disposable component runtime | Verified in source; image digest `sha256:a849a9e39a49ffcacb11733b0ad19e5e5f29c10451f8fd284f2b218f71c2dff1` |
 | Monitoring integration and end-to-end flow | Not implemented |
 
 ## Keamanan

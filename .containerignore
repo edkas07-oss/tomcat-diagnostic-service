@@ -1,0 +1,18 @@
+# Build context hanya memuat artifact runtime yang dipilih eksplisit oleh
+# Containerfile. Pola berikut mencegah metadata, test, dan local state ikut ke
+# builder atau image layer.
+.git
+.gitignore
+AGENTS.md
+README.md
+CONFIG
+PROJECT
+VERSION
+scripts
+test
+node_modules
+npm-debug.log*
+*.key
+*.crt
+*.pem
+*.sqlite*
