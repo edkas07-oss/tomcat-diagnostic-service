@@ -6,28 +6,79 @@ const escapeHtml = (value) => String(value ?? "")
 
 function formatTelemetryEvidence(evidenceList) {
   const telemetry = (evidenceList ?? []).filter((e) => e.source === "prometheus" || e.source === "collector");
-  if (telemetry.length === 0) return "not_configured";
+  if (telemetry.length === 0) return "not_configured (Tidak ada telemetri runtime)";
   return telemetry.map((e) => {
     const val = typeof e.value === "object" && e.value !== null ? JSON.stringify(e.value) : String(e.value ?? "");
-    const observed = e.observedAt ? ` [observed: ${e.observedAt}]` : "";
-    return `• ${e.type} (${e.source}/${e.status}${e.strength ? `, ${e.strength}` : ""}): ${val}${observed}`;
+    const observed = e.observedAt ? ` [waktu observasi: ${e.observedAt}]` : "";
+    return `• ${e.type} (${e.source}/${e.status}${e.strength ? `, strength: ${e.strength}` : ""}): ${val}${observed}`;
   }).join("\n");
 }
 
 function formatLogEvidence(evidenceList) {
   const logs = (evidenceList ?? []).filter((e) => e.source === "local_file");
-  if (logs.length === 0) return "not_configured";
+  if (logs.length === 0) return "not_configured (Tidak ada file log atau ekstrak log yang tercatat)";
   return logs.map((e) => e.value?.excerpt ?? `${e.type}: ${e.status}`).join("\n");
 }
 
 function formatUnavailableAndContradictions(result) {
   const unavailable = result.unavailableSources && result.unavailableSources.length > 0
     ? result.unavailableSources.join(", ")
-    : "none";
+    : "Tidak ada (Semua sumber bukti yang relevan berhasil diperiksa)";
   const contradictions = result.contradictions && result.contradictions.length > 0
     ? result.contradictions.join(", ")
-    : "none";
-  return `Unavailable Sources: ${unavailable}\nContradictions: ${contradictions}`;
+    : "Tidak ada (Tidak ditemukan bukti yang saling bertentangan)";
+  return `Sumber yang Tidak Tersedia: ${unavailable}\nBukti yang Bertentangan: ${contradictions}`;
+}
+
+function getRecommendedActions(result) {
+  const isResolved = result.lifecycleStatus === "resolved";
+  const custom = result.recommendedActions ?? [];
+  const isGenericDefault = custom.length === 1 && (
+    custom[0].startsWith("Review the correlated evidence") ||
+    custom[0].startsWith("Confirm service recovery")
+  );
+
+  if (custom.length > 0 && !isGenericDefault) {
+    return custom.map((action, i) => `${i + 1}. ${action}`).join("\n");
+  }
+
+  if (isResolved) {
+    return [
+      "1. Konfirmasi pemulihan metrik dan status target pada dashboard monitoring Prometheus / Grafana.",
+      "2. Status insiden ditutup secara otomatis; tidak diperlukan tindakan mitigasi lanjutan."
+    ].join("\n");
+  }
+
+  const branch = result.assessment?.branch;
+  if (branch === "TD-06") {
+    return [
+      "1. Periksa status runtime container pada host (periksa apakah container aktif atau terhenti).",
+      "2. Periksa log container untuk menganalisis penyebab penghentian layanan.",
+      "3. Lakukan deploy atau start ulang container Tomcat melalui skrip deployment resmi.",
+      "4. Verifikasi ketersediaan metrik HTTPS pada port 9404 dan endpoint aplikasi pada port 8080."
+    ].join("\n");
+  }
+
+  if (branch === "TD-02") {
+    return [
+      "1. Periksa batas memori container dan cgroup host (indikasi Out Of Memory / OOM).",
+      "2. Analisis heap dump JVM Tomcat dan sesuaikan alokasi memori (-Xmx).",
+      "3. Lakukan start ulang container dengan alokasi memori yang disesuaikan."
+    ].join("\n");
+  }
+
+  if (branch === "TD-01") {
+    return [
+      "1. Container Tomcat berjalan dan aplikasi sehat, namun JMX Exporter tidak merespons pada port 9404.",
+      "2. Periksa sertifikat TLS JMX Exporter dan konfigurasi port binding pada host.",
+      "3. Periksa konektivitas jaringan scraper Prometheus ke target Tomcat."
+    ].join("\n");
+  }
+
+  return [
+    "1. Periksa bukti forensik runtime yang terkorelasi di atas.",
+    "2. Lakukan prosedur pemulihan layanan Tomcat sesuai SOP operasional yang disetujui."
+  ].join("\n");
 }
 
 export function sections(result) {
@@ -35,30 +86,28 @@ export function sections(result) {
   const confidenceStr = result.assessment?.confidence ? `; confidence=${result.assessment.confidence}` : "";
 
   const alertSummary = [
-    `Alert: ${result.ruleId} (Severity: critical)`,
-    `Lifecycle Status: ${String(result.lifecycleStatus).toUpperCase()}`,
-    `Target Identifier: ${result.targetId}`,
+    `Nama Alert: ${result.ruleId} (Tingkat Keparahan: CRITICAL)`,
+    `Status Siklus: ${isResolved ? "RESOLVED (PULIH)" : "FIRING (AKTIF)"}`,
+    `Target Identitas: ${result.targetId}`,
     `Fingerprint: ${result.fingerprint}`,
-    `Incident Started: ${result.startsAt || "not_specified"}`,
-    `Incident Ended: ${result.endsAt || (isResolved ? "resolved" : "active")}`
+    `Waktu Mulai Insiden: ${result.startsAt || "tidak_tersedia"}`,
+    `Waktu Selesai: ${result.endsAt || (isResolved ? "selesai / pulih" : "masih berlangsung (aktif)")}`
   ].join("\n");
 
   const diagnosticAssessment = [
-    `Processing Status: ${result.processingStatus}`,
-    `Classification: ${result.assessment?.classification}`,
-    `Primary Assessment: ${result.assessment?.assessment}`,
-    `Engine Decision Branch: ${result.assessment?.branch}${confidenceStr}`
+    `Status Pemrosesan: ${result.processingStatus === "completed" ? "Selesai (Completed)" : result.processingStatus}`,
+    `Klasifikasi: ${result.assessment?.classification}`,
+    `Hasil Diagnosis Utama: ${result.assessment?.assessment}`,
+    `Branch Keputusan Engine: ${result.assessment?.branch}${confidenceStr}`
   ].join("\n");
 
   const keyMetrics = formatTelemetryEvidence(result.evidence);
   const logEvidence = formatLogEvidence(result.evidence);
   const unavailableContradictions = formatUnavailableAndContradictions(result);
-  const recommendedActions = (result.recommendedActions && result.recommendedActions.length > 0)
-    ? result.recommendedActions.map((action, i) => `${i + 1}. ${action}`).join("\n")
-    : "1. Review the correlated evidence and restore service through an approved operator procedure.";
+  const recommendedActions = getRecommendedActions(result);
 
   const traceability = [
-    `Rule ID / Version: ${result.ruleId}/${result.ruleVersion}`,
+    `Rule ID / Versi: ${result.ruleId}/${result.ruleVersion}`,
     `Diagnostic ID: ${result.diagnosticId}`,
     `Canonical Result Hash: ${result.resultHash}`,
     `Runtime Generation: ${result.generation ?? "null"}`
@@ -81,7 +130,7 @@ export function renderResult(result) {
   const statusColor = isResolved ? "#2e7d32" : "#c62828";
   const statusBg = isResolved ? "#e8f5e9" : "#ffebee";
   const statusBorder = isResolved ? "#a5d6a7" : "#ef9a9a";
-  const headerTitle = isResolved ? "[ RESOLVED ] Service Recovery Diagnostic" : "[ CRITICAL ] Diagnostic Incident Report";
+  const headerTitle = isResolved ? "[ RESOLVED ] Tomcat Service Restored" : "[ CRITICAL ] Tomcat Monitoring Alert & Diagnostic Report";
 
   const textBody = content.map(([title, body]) => `=== ${title} ===\n${body}`).join("\n\n");
 
@@ -125,10 +174,10 @@ export function renderResult(result) {
               <!-- Quick Status Callout -->
               <div style="background-color:${statusBg};border-left:4px solid ${statusColor};border:1px solid ${statusBorder};border-left-width:4px;border-radius:6px;padding:14px 18px;margin-bottom:24px;">
                 <div style="font-size:14px;font-weight:bold;color:${statusColor};margin-bottom:4px;">
-                  ${isResolved ? '✅ Service Restored' : '⚠️ Incident Classification: ' + escapeHtml(String(result.assessment?.classification).toUpperCase())}
+                  ${isResolved ? '✅ Status: Layanan Berhasil Dipulihkan' : '⚠️ Klasifikasi Insiden: ' + escapeHtml(String(result.assessment?.classification).toUpperCase())}
                 </div>
                 <div style="font-size:14px;color:#334155;line-height:1.5;">
-                  <strong>Assessment:</strong> ${escapeHtml(result.assessment?.assessment)} (Branch: <code>${escapeHtml(result.assessment?.branch)}</code>)
+                  <strong>Hasil Evaluasi:</strong> ${escapeHtml(result.assessment?.assessment)} (Branch Keputusan: <code>${escapeHtml(result.assessment?.branch)}</code>)
                 </div>
               </div>
               <!-- 7 Ordered Contract Sections -->
