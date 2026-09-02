@@ -22,3 +22,20 @@ test("collector spool accepts only bounded records for the target window", () =>
   const window = { generation: "g1", from: "2026-08-31T00:59:00Z", to: "2026-08-31T01:01:00Z", collectedAt: "2026-08-31T01:01:00Z" };
   assert.equal(readCollectorSpool(target, window).length, 1);
 });
+
+test("createDefaultEvidenceCollector reads spool evidence from target", async () => {
+  const { createDefaultEvidenceCollector } = await import("../../src/application/application.js");
+  const { TargetRegistry } = await import("../../src/application/target-registry.js");
+  directory = mkdtempSync(join(tmpdir(), "diagnostic-spool-"));
+  const record = {
+    type: "container_state", target_id: "lab/tomcat-01/default", generation: "1", observed_at: new Date().toISOString(),
+    status: "collected", strength: "direct", value: { state: "exited" }, redacted: false
+  };
+  writeFileSync(join(directory, "100_container_state.json"), JSON.stringify(record));
+  const registry = new TargetRegistry([{ identity: { environment: "lab", host: "tomcat-01", tomcat_instance: "default" }, collectorSpool: directory }]);
+  const collector = createDefaultEvidenceCollector(registry);
+  const evidence = await collector({ targetId: "lab/tomcat-01/default", generation: "1", startsAt: new Date().toISOString() });
+  assert.equal(evidence.length, 1);
+  assert.equal(evidence[0].type, "container_state");
+  assert.equal(evidence[0].value.state, "exited");
+});

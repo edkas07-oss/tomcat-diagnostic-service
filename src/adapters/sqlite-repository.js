@@ -62,7 +62,13 @@ export class SqliteRepository {
         }
         this.database.prepare(`INSERT INTO incidents(fingerprint, environment, host, tomcat_instance, state, first_firing_at, resolved_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(fingerprint) DO UPDATE SET state = excluded.state, resolved_at = excluded.resolved_at, updated_at = excluded.updated_at`)
+          ON CONFLICT(fingerprint) DO UPDATE SET
+            state = excluded.state,
+            first_firing_at = COALESCE(incidents.first_firing_at, excluded.first_firing_at),
+            resolved_at = excluded.resolved_at,
+            updated_at = excluded.updated_at,
+            resolved_notification_count = CASE WHEN incidents.state = 'resolved' AND excluded.state = 'firing' THEN 0 ELSE incidents.resolved_notification_count END,
+            material_update_count = CASE WHEN incidents.state = 'resolved' AND excluded.state = 'firing' THEN 0 ELSE incidents.material_update_count END`)
           .run(alert.fingerprint, alert.labels.environment, alert.labels.host, alert.labels.tomcat_instance,
             alert.status, alert.status === "firing" ? alert.eventTime : null,
             alert.status === "resolved" ? alert.eventTime : null, request.acceptedAt);

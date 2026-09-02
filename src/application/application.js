@@ -10,6 +10,51 @@ import { targetKey } from "./ingest-alertmanager.js";
 import { createHttpsService } from "../server/http-service.js";
 import { createWebhookValidator } from "../server/webhook-schema.js";
 import { SmtpAdapter } from "../adapters/smtp-adapter.js";
+import { readCollectorSpool } from "../adapters/collector-spool-adapter.js";
+import { collectLocalFileEvidence } from "../adapters/local-file-evidence-adapter.js";
+import { collectApplicationHealth } from "../adapters/application-health-adapter.js";
+
+export function createDefaultEvidenceCollector(targetRegistry) {
+  return async (event) => {
+    const target = targetRegistry.targets.get(event.targetId);
+    if (!target) return [];
+    const now = new Date();
+    const observedAt = event.startsAt ?? now.toISOString();
+    const windowStart = new Date(Date.parse(observedAt) - 5 * 60 * 1000).toISOString();
+    const windowEnd = new Date(Date.parse(observedAt) + 5 * 60 * 1000).toISOString();
+    const window = {
+      targetId: target.targetId,
+      generation: event.generation,
+      from: windowStart,
+      to: windowEnd,
+      collectedAt: now.toISOString()
+    };
+    const context = {
+      generation: event.generation,
+      observedAt,
+      collectedAt: now.toISOString()
+    };
+    const evidence = [];
+    if (target.collectorSpool) {
+      const spoolEvidence = readCollectorSpool(target, window);
+      const latestByType = new Map();
+      for (const item of spoolEvidence) {
+        const existing = latestByType.get(item.type);
+        if (!existing || Date.parse(item.observedAt) >= Date.parse(existing.observedAt)) {
+          latestByType.set(item.type, item);
+        }
+      }
+      evidence.push(...latestByType.values());
+    }
+    if (target.logDirectory) {
+      evidence.push(collectLocalFileEvidence(target, context, { rootField: "logDirectory", relativePath: "catalina.out", type: "orderly_shutdown" }));
+    }
+    if (target.applicationHealthUrl) {
+      evidence.push(await collectApplicationHealth(target, context));
+    }
+    return evidence;
+  };
+}
 
 export class DiagnosticApplication {
   constructor(config, dependencies = {}) {
@@ -31,7 +76,8 @@ export class DiagnosticApplication {
       else {
         const smtp = this.dependencies.smtp ?? new SmtpAdapter(this.config.smtp);
         const notification = this.dependencies.notification ?? new NotificationDelivery(this.repository, smtp, { health: this.health });
-        this.worker = new DiagnosticWorker(this.repository, this.dependencies.collectEvidence ?? (async () => []), { timeoutMs: this.config.timeouts.diagnosticMs, notification });
+        const collectEvidence = this.dependencies.collectEvidence ?? createDefaultEvidenceCollector(this.config.targetRegistry);
+        this.worker = new DiagnosticWorker(this.repository, collectEvidence, { timeoutMs: this.config.timeouts.diagnosticMs, notification });
       }
       this.server = this.dependencies.server ?? createHttpsService(this.config.tls, {
         token: this.config.bearerToken,
