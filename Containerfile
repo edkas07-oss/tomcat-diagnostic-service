@@ -17,7 +17,7 @@ FROM ${BASE_IMAGE}
 # exact reference tersedia bagi OCI label pada build stage yang sama.
 ARG BASE_IMAGE
 ARG IMAGE_PROJECT=tomcat-diagnostic-service
-ARG IMAGE_VERSION=0.1.0
+ARG IMAGE_VERSION=0.1.1
 ARG BASE_IMAGE_ID
 
 ENV NODE_ENV=production

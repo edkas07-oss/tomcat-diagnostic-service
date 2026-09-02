@@ -14,8 +14,9 @@ seven-section renderers juga tersedia. HTTPS request boundary dan SMTP adapter
 telah lulus ephemeral socket component tests. Versioned application
 configuration, mounted-file secret loading, startup lifecycle, single worker
 loop, dan Prometheus text serialization tersedia pada source.
-Application image lifecycle memakai immutable local Node.js base digest pada
-TN-010. Persistent runtime, Mailpit integration, dan end-to-end flow belum
+Application image lifecycle memakai immutable local Node.js base digest.
+TN-013 telah memverifikasi image `0.1.1` serta disposable Mailpit/SQLite flow.
+Persistent runtime, actual Alertmanager route, dan end-to-end flow belum
 diverifikasi.
 
 ## Batas Tanggung Jawab
@@ -133,7 +134,7 @@ Integration runtime harus mengonsumsi image menggunakan exact digest, bukan
 tag mutable:
 
 ```text
-localhost/tomcat-diagnostic-service@sha256:a849a9e39a49ffcacb11733b0ad19e5e5f29c10451f8fd284f2b218f71c2dff1
+localhost/tomcat-diagnostic-service@sha256:94bf8fbe4ce75e60f3481b9346cb0e79bdb397a36d32e7de4e2adfbe9f5fa20f
 ```
 
 Application JSON dipasang read-only pada
@@ -164,8 +165,9 @@ Source terbaru menghubungkan canonical result, renderer, SQLite attempt state,
 dan SMTP adapter melalui satu worker. Policy pilot memakai maksimum tiga
 attempts, backoff 1 dan 5 detik, maximum age 60 detik, serta existing queue
 berkapasitas 50 tanpa queue kedua. Source dan ephemeral SMTP socket tests telah
-lulus; image digest di atas masih artifact TN-010 dan belum membawa perubahan
-source TN-012. Mailpit serta persistent runtime tetap belum diverifikasi.
+lulus; image `0.1.1` pada digest di atas telah dibangun dan lulus image-static
+serta disposable Mailpit/SQLite verification. Persistent runtime dan actual
+Alertmanager route belum diverifikasi.
 
 ## Status Implementasi
 
@@ -180,8 +182,8 @@ source TN-012. Mailpit serta persistent runtime tetap belum diverifikasi.
 | `TomcatDown` TD-01 through TD-08 engine | Implemented in source |
 | Versioned application configuration | Implemented in source |
 | HTTP server and diagnostic orchestration | Implemented in source; persistent runtime not verified |
-| Notification lifecycle and bounded SMTP retry | Implemented in source; Mailpit/runtime not verified |
-| Application image build and disposable component runtime | Verified in source; image digest `sha256:a849a9e39a49ffcacb11733b0ad19e5e5f29c10451f8fd284f2b218f71c2dff1` |
+| Notification lifecycle and bounded SMTP retry | Implemented; disposable actual Mailpit firing/resolved delivery verified |
+| Application image build and disposable component runtime | Verified for `0.1.1`; digest `sha256:94bf8fbe4ce75e60f3481b9346cb0e79bdb397a36d32e7de4e2adfbe9f5fa20f` |
 | Monitoring integration and end-to-end flow | Not implemented |
 
 ## Keamanan

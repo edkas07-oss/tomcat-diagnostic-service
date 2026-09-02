@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, test } from "node:test";
@@ -27,12 +27,14 @@ function fixture(capacity = 50) {
 
 test("commits before acceptance and suppresses duplicate work across reopen", () => {
   const item = fixture();
+  assert.equal(statSync(item.path).mode & 0o777, 0o600);
   const options = { ...item, now: () => new Date("2026-08-31T01:01:00Z") };
   const accepted = ingestAlertmanager(webhook(), options);
   assert.equal(accepted.events[0].duplicate, false);
   item.repository.close();
 
   const reopened = new SqliteRepository(item.path, { migrationsDirectory: resolve("migrations") });
+  assert.equal(statSync(item.path).mode & 0o777, 0o600);
   item.repository = reopened;
   item.queue = new BoundedWorkQueue(reopened);
   const duplicate = ingestAlertmanager(webhook(), { ...options, queue: item.queue });

@@ -26,8 +26,10 @@ image="${IMAGE_NAME}:${version}"
 
 [[ "$(podman image inspect "${image}" --format '{{.Config.User}}')" == "node" ]]
 [[ "$(podman image inspect "${image}" --format '{{.Config.WorkingDir}}')" == "/app" ]]
+[[ "$(podman image inspect "${image}" --format '{{index .Config.Labels "org.opencontainers.image.version"}}')" == "${version}" ]]
 [[ "$(podman image inspect "${image}" --format '{{index .Config.Labels "org.opencontainers.image.base.name"}}')" == "${BASE_IMAGE}" ]]
 [[ "$(podman image inspect "${image}" --format '{{index .Config.Labels "io.tomcat-diagnostic.base.image.id"}}')" == "${BASE_IMAGE_ID}" ]]
+[[ "$(podman image inspect "${image}" --format '{{json .Config.Cmd}}')" == '["node","src/main.js","--config","/run/tomcat-diagnostic/application.json"]' ]]
 
 podman run --rm "${image}" node --version | grep -Fx "v${NODE_VERSION}"
 podman run --rm "${image}" npm ls --omit=dev --depth=0

@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { chmodSync, readFileSync, readdirSync } from "node:fs";
 import { basename, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { QueueCapacityError } from "../application/bounded-queue.js";
@@ -13,6 +13,7 @@ export class MigrationError extends Error {
 export class SqliteRepository {
   constructor(databasePath, { migrationsDirectory }) {
     this.database = new DatabaseSync(databasePath);
+    if (databasePath !== ":memory:") chmodSync(databasePath, 0o600);
     this.database.exec("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;");
     this.migrate(migrationsDirectory);
   }
