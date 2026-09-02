@@ -64,7 +64,7 @@ export class SqliteRepository {
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(fingerprint) DO UPDATE SET
             state = excluded.state,
-            first_firing_at = COALESCE(incidents.first_firing_at, excluded.first_firing_at),
+            first_firing_at = CASE WHEN incidents.state = 'resolved' AND excluded.state = 'firing' THEN excluded.first_firing_at ELSE COALESCE(incidents.first_firing_at, excluded.first_firing_at) END,
             resolved_at = excluded.resolved_at,
             updated_at = excluded.updated_at,
             resolved_notification_count = CASE WHEN incidents.state = 'resolved' AND excluded.state = 'firing' THEN 0 ELSE incidents.resolved_notification_count END,
@@ -123,9 +123,11 @@ export class SqliteRepository {
   }
 
   latestCanonicalResult(fingerprint, lifecycleStatus = null) {
+    const incident = this.database.prepare("SELECT first_firing_at FROM incidents WHERE fingerprint=?").get(fingerprint);
+    const since = incident?.first_firing_at ?? null;
     const row = this.database.prepare(`SELECT c.result_json FROM canonical_results c JOIN events e ON e.id=c.event_id
-      WHERE e.fingerprint=? AND (? IS NULL OR e.status=?) ORDER BY c.id DESC LIMIT 1`)
-      .get(fingerprint, lifecycleStatus, lifecycleStatus);
+      WHERE e.fingerprint=? AND (? IS NULL OR e.status=?) AND (? IS NULL OR e.accepted_at >= ? OR e.event_time >= ?) ORDER BY c.id DESC LIMIT 1`)
+      .get(fingerprint, lifecycleStatus, lifecycleStatus, since, since, since);
     return row ? JSON.parse(row.result_json) : null;
   }
 
