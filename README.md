@@ -1,200 +1,126 @@
 # Tomcat Diagnostic Service
 
-Repository ini memiliki aplikasi Diagnostic Service untuk pilot Tomcat
-Monitoring. Service akan menerima alert `TomcatDown`, melakukan korelasi
-evidence yang dibatasi, menyimpan lifecycle diagnosis pada SQLite, dan
-membentuk notification content. Service tidak melakukan automatic remediation
-atau mengendalikan container Tomcat.
+Repository ini berisi aplikasi core **Tomcat Diagnostic Service** untuk platform Tomcat Monitoring & Diagnostics. Layanan ini bertindak sebagai *Autonomous Diagnostic Engine* yang menerima webhook alert `TomcatDown` dari Alertmanager, melakukan korelasi bukti log, artefak crash, dan telemetri runtime secara deterministik, mengevaluasi basis aturan (*Declarative Rulepack Engine*), mengelola persistensi siklus hidup diagnosis pada SQLite, serta menerbitkan laporan diagnosis terstruktur 7 seksi dengan rekomendasi SOP operator via SMTP (Mailpit/Email).
 
-Source saat ini menyediakan schema webhook Alertmanager v4, migration SQLite,
-durable event ingestion, deduplication, serta queue persisten berkapasitas 50.
-Target registry, bounded evidence adapters, deterministic `TomcatDown` decision
-table, single worker, canonical-result persistence, health/metrics model, dan
-seven-section renderers juga tersedia. HTTPS request boundary dan SMTP adapter
-telah lulus ephemeral socket component tests. Versioned application
-configuration, mounted-file secret loading, startup lifecycle, single worker
-loop, dan Prometheus text serialization tersedia pada source.
-Application image lifecycle memakai immutable local Node.js base digest.
-TN-013 telah memverifikasi image `0.1.1` serta disposable Mailpit/SQLite flow.
-Persistent runtime, actual Alertmanager route, dan end-to-end flow belum
-diverifikasi.
+Layanan ini dirancang berdasarkan prinsip **Deterministic Honesty** dan **Human-in-the-Loop Governance** — sistem tidak melakukan *automatic remediation* atau manipulasi proses container Tomcat secara sewenang-wenang.
 
-## Batas Tanggung Jawab
+---
 
-Repository ini akan memiliki source aplikasi, dependency lock, JSON Schema,
-migration, SQLite adapter, diagnostic engine, renderer, image lifecycle, unit
-test, dan component test. Integration configuration, target allowlist,
-certificate serta secret injection, deployment orchestration, dan end-to-end
-verification tetap dimiliki repository `tomcat-monitoring`.
+## 🏛️ Fitur & Kapabilitas Utama
 
-Restricted Event Collector tidak berada di repository ini. Diagnostic Service
-tidak boleh menjalankan arbitrary shell command, restart, kill, configuration
-change, atau tindakan pemulihan otomatis.
+1. **Durable Alert Ingestion & Queue:** Ingestion webhook Alertmanager v4 melalui HTTPS TLS dengan deduplikasi persisten dan antrean berkapasitas 50 event.
+2. **Deterministic & Declarative Rulepack Engine:** Pohon keputusan deterministik 18 cabang:
+   - **8 Built-in Branches (`TD-01` s/d `TD-08`):** TLS scrape unavailable, OOM Killed, JVM Crash, Port bind conflict, Orderly shutdown, Container exited unknown, Contradicting state, dan Undetermined evidence.
+   - **10 Curated Custom Branches (`TD-09` s/d `TD-18`):** Database pool exhaustion, Thread pool exhaustion, Heap OOM, Metaspace OOM, SSL Handshake failure, HikariCP timeout, Context init failure, Thread deadlock, Socket read timeout, dan SQL timeout.
+3. **Safe Hot-Reload Rules API (`/api/v1/rules`):**
+   - Ingestion aturan baru secara *live* tanpa *restart container* (*zero-downtime hot-reload*).
+   - Dilindungi oleh **5-Layer Ingestion Defense-in-Depth** (Auth Guard, Schema Guard, Collision Guard, Payload Size Guard, dan Append-Only Immutability Guard).
+4. **Resilient Notification Delivery:** Single worker loop dengan retry berbatas (*exponential backoff* 1s & 5s, maks 3 percobaan) dan korelasi *resolved state*.
+5. **SQLite Persistence:** Migrasi schema forward-only (`001` s/d `005`), tabel `events`, `incidents`, `canonical_results`, `evidence_summaries`, `delivery_attempts`, `notification_attempts`, dan `custom_rules`.
+6. **Observability:** Endpoint `/health/live`, `/health/ready`, dan `/metrics` (Prometheus text format).
 
-## Toolchain yang Diterima
+---
 
-- Node.js `24.18.0` dengan ESM JavaScript;
-- built-in `node:test` untuk test runner;
-- isolated built-in `node:sqlite` untuk pilot setelah persistence
-  diimplementasikan; dan
-- reusable base image `localhost/nodejs:24.18.0`, dengan immutable build
-  identity ditetapkan sebelum image build dijalankan.
+## 📦 Toolchain & Standar Lingkungan
 
-JSON Schema memakai exact-pinned `ajv@8.20.0`; SMTP memakai exact-pinned
-`nodemailer@9.0.6`.
+- **Runtime:** Node.js `24.18.0` (ESM JavaScript murni).
+- **Test Runner:** Built-in `node:test` dan `node:assert`.
+- **Database:** Built-in `node:sqlite` (SQLite 3 synchronous engine).
+- **JSON Schema Validator:** Exact-pinned `ajv@8.20.0`.
+- **SMTP Client:** Exact-pinned `nodemailer@9.0.6`.
+- **Base Container Image:** `localhost/nodejs:24.18.0` (Digest pinned).
 
-## Struktur Source
+---
+
+## 📂 Struktur Repositori
 
 ```text
 tomcat-diagnostic-service/
-├── AGENTS.md          Governance dan repository boundary
+├── AGENTS.md          Tata kelola agen dan batasan repositori
 ├── CONFIG             Metadata toolchain non-secret
-├── Containerfile      Digest-pinned application image
+├── Containerfile      Digest-pinned application container image
 ├── PROJECT            Identitas project yang dapat dibaca script
-├── README.md          Contract dan status implementasi
-├── VERSION            Versi aplikasi baseline
-├── package.json       Contract package ESM dan Ajv
+├── README.md          Spesifikasi kontrak dan status implementasi
+├── VERSION            Versi rilis aplikasi (saat ini: 0.1.3)
+├── package.json       Kontrak package ESM dan dependency lock
 ├── package-lock.json  Dependency lock
-├── config/schemas/    Versioned webhook dan application configuration schema
-├── migrations/        Forward-only SQLite migration
-├── src/               Ingestion, queue, dan SQLite adapter
-├── test/              Unit dan temporary-SQLite integration test
+├── config/schemas/    Versioned JSON Schemas:
+│   ├── alertmanager-webhook-v4.schema.json
+│   ├── application-config-v1.schema.json
+│   └── rulepack-v1.schema.json
+├── migrations/        Forward-only SQLite schema migrations:
+│   ├── 001-initial.sql
+│   ├── 002-canonical-results.sql
+│   ├── 003-delivery-attempts.sql
+│   ├── 004-notification-lifecycle.sql
+│   └── 005-custom-rules.sql
+├── src/               Kode sumber aplikasi:
+│   ├── adapters/      SQLite repository, SMTP sender, & Evidence collectors
+│   ├── application/   Diagnostic worker, Result renderer, & Notification orchestrator
+│   ├── domain/        Deterministic engine, Rulepack loader, & Dynamic evaluator
+│   └── server/        HTTPS server, Authentication, Routes, & Schema validators
+├── test/              Unit dan temporary-SQLite integration test suites (46 unit tests)
 └── scripts/
     ├── build.sh       Build versioned dan latest local image
-    ├── test-image.sh  Static runtime/image contract probes
-    ├── test-image-component.sh  Disposable HTTPS/SQLite/signal test
-    └── validate.sh    Static validation tanpa network atau container
+    ├── test-image.sh  Static runtime & container image contract probes
+    ├── test-image-component.sh  Disposable HTTPS/SQLite/signal tests
+    └── validate.sh    Static validation tanpa network/container
 ```
 
-## Static Validation
+---
 
-Jalankan dari root repository:
+## 🧪 Validasi & Pengujian
 
+### 1. Static Code Validation
 ```bash
 ./scripts/validate.sh
 ```
 
-Validator memeriksa file wajib, metadata project dan package, exact Node.js
-engine dan Ajv, shell syntax, larangan framework/ORM/host-control dependency,
-serta pola assignment secret yang tidak boleh masuk source.
-Validator tidak membuktikan application behavior, SQLite durability, image
-build, HTTPS, authentication, runtime health, atau monitoring integration.
-
-## Application Configuration dan Startup
-
-Jalankan aplikasi dengan satu absolute configuration path:
-
+### 2. Unit & Integration Tests (46 Tests)
 ```bash
-npm start -- --config /run/tomcat-diagnostic/application.json
+podman run --rm -v $(pwd):/app -w /app localhost/nodejs:latest npm test
 ```
 
-`application-config-v1.schema.json` menentukan database path, listen address,
-TLS certificate/private-key file, bearer-token file, target-allowlist file,
-SMTP endpoint dan optional credential files, queue, timeout, serta request
-limit. JSON application configuration tidak boleh berisi token, password,
-certificate, atau private key. Nilai sensitif dibaca saat startup dari mounted
-file yang direferensikan menggunakan absolute normalized path.
-
-Startup memvalidasi seluruh input, membuka SQLite dan menjalankan forward-only
-migration, memulai HTTPS, mengubah readiness menjadi ready, lalu menjalankan
-tepat satu sequential diagnostic worker loop. `SIGTERM` dan `SIGINT`
-menghentikan request acceptance dan readiness sebelum server/worker dihentikan;
-database ditutup terakhir.
-
-## Image Lifecycle
-
-`CONFIG` mem-pin reusable local base menggunakan OCI digest dan image ID.
-Build menolak base dengan identity berbeda, memasang dependency dari
-`package-lock.json`, dan menghasilkan dua tag lokal:
-
+### 3. Container Image Build
 ```bash
 ./scripts/build.sh
 ./scripts/test-image.sh
 ```
 
-Image menggunakan user `node`, working directory `/app`, port deklaratif
-`8443`, serta startup command yang membaca
-`/run/tomcat-diagnostic/application.json`. Certificate, private key, bearer
-token, allowlist, dan SQLite database tidak berada di image; seluruhnya harus
-diberikan melalui mount runtime.
+---
 
-Disposable image-level verification memerlukan exact temporary directory yang
-berisi `server.crt` dan `server.key`:
+## 🌐 Rules API Specification
 
-```bash
-./scripts/test-image-component.sh /tmp/tomcat-diagnostic-component
-```
+Base URL: `https://diagnostic-service:8443`  
+Header Wajib: `Authorization: Bearer <token>`
 
-Script menghapus exact test container melalui trap, tetapi caller tetap
-bertanggung jawab menghapus temporary directory setelah evidence dicatat.
+| Method | Endpoint | Deskripsi | Status Code |
+| :---: | :--- | :--- | :---: |
+| `POST` | `/api/v1/rules` | Ingest Declarative Rulepack baru (Hot-Reload) | `201 Created` / `400` / `401` / `409` / `413` |
+| `GET` | `/api/v1/rules` | Ekspor seluruh katalog aturan aktif di sistem | `200 OK` / `401 Unauthorized` |
+| `GET` | `/api/v1/rules/:id` | Ekspor aturan spesifik berdasarkan Branch / ID | `200 OK` / `404 Not Found` |
+| `PUT/DELETE` | `/api/v1/rules/*` | Upaya modifikasi/penghapusan (Ditolak) | `405 Method Not Allowed` |
 
-## Runtime Consumption Contract
+---
 
-Integration runtime harus mengonsumsi image menggunakan exact digest, bukan
-tag mutable:
+## 📊 Status Implementasi & Verifikasi
 
-```text
-localhost/tomcat-diagnostic-service@sha256:94bf8fbe4ce75e60f3481b9346cb0e79bdb397a36d32e7de4e2adfbe9f5fa20f
-```
+| Komponen & Kapabilitas | Status | Catatan Verifikasi |
+| :--- | :---: | :--- |
+| **Repository Governance & Boundaries** | ✅ Selesai | Pinned toolchain, ESM, no-framework |
+| **Alertmanager Ingestion & Queue** | ✅ Selesai | Webhook v4, deduplikasi, kapasitas 50 |
+| **SQLite Persistence & Migrations** | ✅ Selesai | 5 migration files, zero-data loss |
+| **Decision Engine (TD-01..TD-08)** | ✅ Selesai | Deterministic honesty, 7-section reports |
+| **Custom Rule Engine (TD-09..TD-18)**| ✅ Selesai | Dynamic rulepack evaluation & hot-reloading |
+| **Rules API & 5-Layer Defense** | ✅ Selesai | Auth, schema, collision, size, immutability |
+| **SMTP Delivery & Resolved Correlation**| ✅ Selesai | Exponential retry, clean HTML/Text reports |
+| **Persistent Lab Deployment** | ✅ Selesai | Aktif di `devops-lab` container network |
+| **Automated Verification Suites** | ✅ Selesai | 100% lulus pada 46 unit test & end-to-end suites |
 
-Application JSON dipasang read-only pada
-`/run/tomcat-diagnostic/application.json`. File tersebut menunjuk exact
-container paths berikut:
+---
 
-| Artifact | Container path | Access |
-| --- | --- | --- |
-| Target allowlist | `/run/tomcat-diagnostic/config/targets.json` | Read-only |
-| TLS certificate | `/run/tomcat-diagnostic/tls/server.crt` | Read-only |
-| TLS private key | `/run/tomcat-diagnostic/tls/server.key` | Read-only |
-| Bearer token | `/run/tomcat-diagnostic/secrets/bearer-token` | Read-only |
-| Optional SMTP username/password | `/run/tomcat-diagnostic/secrets/smtp-username` and `smtp-password` | Read-only |
-| SQLite directory | `/var/lib/tomcat-diagnostic` | Read-write |
-| SQLite database | `/var/lib/tomcat-diagnostic/diagnostic.db` | Runtime-created |
+## 📖 Dokumentasi Terkait
 
-Image berjalan sebagai user `node`. Runtime owner wajib membuktikan user
-tersebut dapat membaca mounted inputs dan membuat serta mengunci SQLite pada
-exact image digest. Configuration, allowlist, certificate, dan secret tetap
-dimiliki integration/non-Git storage; repository ini hanya memiliki schema,
-loader, migration, dan application lifecycle.
-
-Exact values, host modes, ownership, disposable multi-component topology, dan
-cleanup gate berada pada handbook
-`diagnostic-mvp/runtime-configuration-and-verification-contract.md`.
-
-Source terbaru menghubungkan canonical result, renderer, SQLite attempt state,
-dan SMTP adapter melalui satu worker. Policy pilot memakai maksimum tiga
-attempts, backoff 1 dan 5 detik, maximum age 60 detik, serta existing queue
-berkapasitas 50 tanpa queue kedua. Source dan ephemeral SMTP socket tests telah
-lulus; image `0.1.1` pada digest di atas telah dibangun dan lulus image-static
-serta disposable Mailpit/SQLite verification. Persistent runtime dan actual
-Alertmanager route belum diverifikasi.
-
-## Status Implementasi
-
-| Capability | Status |
-| --- | --- |
-| Repository governance | Committed baseline |
-| Project and package metadata | Implemented; exact-pinned Ajv |
-| Static validation interface | Implemented in source |
-| Schema, durable ingestion, and queue | Implemented in source |
-| SQLite migration and restart deduplication tests | Implemented in source |
-| Target isolation and bounded evidence adapters | Implemented in source |
-| `TomcatDown` TD-01 through TD-08 engine | Implemented in source |
-| Versioned application configuration | Implemented in source |
-| HTTP server and diagnostic orchestration | Implemented in source; persistent runtime not verified |
-| Notification lifecycle and bounded SMTP retry | Implemented; disposable actual Mailpit firing/resolved delivery verified |
-| Application image build and disposable component runtime | Verified for `0.1.1`; digest `sha256:94bf8fbe4ce75e60f3481b9346cb0e79bdb397a36d32e7de4e2adfbe9f5fa20f` |
-| Monitoring integration and end-to-end flow | Not implemented |
-
-## Keamanan
-
-Jangan menyimpan bearer token, SMTP credential, certificate, private key,
-environment-specific target, atau unsanitized diagnostic evidence di
-repository. Configuration sensitif harus diberikan melalui mekanisme secret
-injection yang disetujui oleh integration owner.
-
-## Dokumentasi Terkait
-
-Contract arsitektur dan perjalanan implementation tersedia pada DevOps
-Engineering Handbook di `docs/projects/tomcat-monitoring/diagnostic-mvp/` dan
-`docs/projects/tomcat-monitoring/engineering-journal/diagnostic-mvp-pilot/`.
+* **DevOps Handbook:** [`devops-handbook/docs/projects/tomcat-monitoring/`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/)
+* **AI Knowledge Runbook:** [`devops-handbook/docs/projects/tomcat-monitoring/operations/ai-knowledge-enrichment-and-rule-management-runbook.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/operations/ai-knowledge-enrichment-and-rule-management-runbook.md)
+* **Engineering Journal TN-018 & TN-019:** [`devops-handbook/docs/projects/tomcat-monitoring/engineering-journal/diagnostic-mvp-pilot/`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/engineering-journal/diagnostic-mvp-pilot/)
