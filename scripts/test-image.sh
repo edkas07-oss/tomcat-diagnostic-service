@@ -37,8 +37,10 @@ podman run --rm "${image}" sh -eu -c '
     test "$(id -u)" -ne 0
     test -f src/main.js
     test -f config/schemas/application-config-v1.schema.json
+    test -f config/schemas/rulepack-v1.schema.json
     test -f migrations/003-delivery-attempts.sql
     test -f migrations/004-notification-lifecycle.sql
+    test -f migrations/005-custom-rules.sql
     test ! -e test
     test ! -e CONFIG
     test ! -e README.md

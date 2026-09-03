@@ -54,10 +54,12 @@ required_files=(
     package-lock.json
     config/schemas/alertmanager-webhook-v4.schema.json
     config/schemas/application-config-v1.schema.json
+    config/schemas/rulepack-v1.schema.json
     migrations/001-initial.sql
     migrations/002-canonical-results.sql
     migrations/003-delivery-attempts.sql
     migrations/004-notification-lifecycle.sql
+    migrations/005-custom-rules.sql
     src/adapters/application-health-adapter.js
     src/adapters/bounded-file-reader.js
     src/adapters/collector-spool-adapter.js
@@ -76,8 +78,10 @@ required_files=(
     src/application/target-registry.js
     src/domain/evidence.js
     src/domain/canonical-result.js
+    src/domain/rulepack-loader.js
     src/domain/tomcat-down-engine.js
     src/server/webhook-schema.js
+    src/server/rulepack-schema.js
     src/server/http-service.js
     src/main.js
     scripts/build.sh

@@ -9,6 +9,8 @@ import { HealthMetrics, serializePrometheus } from "./health-metrics.js";
 import { targetKey } from "./ingest-alertmanager.js";
 import { createHttpsService } from "../server/http-service.js";
 import { createWebhookValidator } from "../server/webhook-schema.js";
+import { createRulepackValidator } from "../server/rulepack-schema.js";
+import { DynamicRuleEvaluator } from "../domain/rulepack-loader.js";
 import { SmtpAdapter } from "../adapters/smtp-adapter.js";
 import { readCollectorSpool } from "../adapters/collector-spool-adapter.js";
 import { collectLocalFileEvidence } from "../adapters/local-file-evidence-adapter.js";
@@ -69,23 +71,35 @@ export class DiagnosticApplication {
     try {
       const projectRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
       this.repository = this.dependencies.repository ?? new SqliteRepository(this.config.databasePath, { migrationsDirectory: join(projectRoot, "migrations") });
+      const initialRules = typeof this.repository.listCustomRules === "function" ? this.repository.listCustomRules() : [];
+      this.ruleEvaluator = this.dependencies.ruleEvaluator ?? new DynamicRuleEvaluator(initialRules);
+      const rulesValidator = this.dependencies.rulesValidator ?? createRulepackValidator(join(projectRoot, "config/schemas/rulepack-v1.schema.json"));
       const queue = this.dependencies.queue ?? new BoundedWorkQueue(this.repository, { capacity: this.config.queue.capacity });
       const validate = this.dependencies.webhookValidator ?? createWebhookValidator(join(projectRoot, "config/schemas/alertmanager-webhook-v4.schema.json"));
       const allowedTargets = new Set([...this.config.targetRegistry.targets.values()].map(({ identity }) => targetKey(identity)));
+      
       if (this.dependencies.worker) this.worker = this.dependencies.worker;
       else {
         const smtp = this.dependencies.smtp ?? new SmtpAdapter(this.config.smtp);
         const notification = this.dependencies.notification ?? new NotificationDelivery(this.repository, smtp, { health: this.health });
         const collectEvidence = this.dependencies.collectEvidence ?? createDefaultEvidenceCollector(this.config.targetRegistry);
-        this.worker = new DiagnosticWorker(this.repository, collectEvidence, { timeoutMs: this.config.timeouts.diagnosticMs, notification });
+        this.worker = new DiagnosticWorker(this.repository, collectEvidence, {
+          timeoutMs: this.config.timeouts.diagnosticMs,
+          notification,
+          evaluator: (evidence) => this.ruleEvaluator.evaluate(evidence)
+        });
       }
+      
       this.server = this.dependencies.server ?? createHttpsService(this.config.tls, {
         token: this.config.bearerToken,
         health: this.health,
         metricsText: () => serializePrometheus(this.health),
         requestLimitBytes: this.config.requestLimitBytes,
         accepting: () => this.accepting,
-        ingestion: { queue, validate, allowedTargets }
+        ingestion: { queue, validate, allowedTargets },
+        repository: this.repository,
+        ruleEvaluator: this.ruleEvaluator,
+        rulesValidator
       });
       this.server.listen(this.config.listen.port, this.config.listen.host);
       await once(this.server, "listening");

@@ -10,6 +10,13 @@ export class MigrationError extends Error {
   }
 }
 
+export class RuleCollisionError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "RuleCollisionError";
+  }
+}
+
 export class SqliteRepository {
   constructor(databasePath, { migrationsDirectory }) {
     this.database = new DatabaseSync(databasePath);
@@ -151,6 +158,114 @@ export class SqliteRepository {
     const updated = this.database.prepare("UPDATE notification_attempts SET status=?, error_code=?, attempted_at=? WHERE result_id=? AND attempt=? AND status='pending'")
       .run(status, errorCode, new Date().toISOString(), resultId, attempt);
     if (Number(updated.changes) !== 1) throw new RangeError("notification attempt is not pending");
+  }
+
+  insertCustomRule(rule, createdBy = "operator-sre") {
+    const existing = this.getCustomRuleByBranch(rule.branch);
+    if (existing) {
+      throw new RuleCollisionError(`Branch '${rule.branch}' already exists in custom rules`);
+    }
+    const ruleId = rule.ruleId ?? "TomcatDown";
+    const ruleJson = JSON.stringify(rule);
+    const createdAt = new Date().toISOString();
+    try {
+      const result = this.database.prepare(`
+        INSERT INTO custom_rules(rule_id, branch, name, target_source, pattern, assessment, classification, confidence, rule_json, created_by, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        ruleId,
+        rule.branch,
+        rule.ruleName,
+        rule.targetSource,
+        rule.pattern,
+        rule.assessment,
+        rule.classification,
+        rule.confidence ?? null,
+        ruleJson,
+        createdBy,
+        createdAt
+      );
+      return {
+        id: Number(result.lastInsertRowid),
+        ruleId,
+        branch: rule.branch,
+        ruleName: rule.ruleName,
+        targetSource: rule.targetSource,
+        pattern: rule.pattern,
+        assessment: rule.assessment,
+        classification: rule.classification,
+        confidence: rule.confidence ?? null,
+        recommendedActions: rule.recommendedActions ?? [],
+        createdBy,
+        createdAt
+      };
+    } catch (error) {
+      if (error?.message?.includes("UNIQUE constraint failed")) {
+        throw new RuleCollisionError(`Branch '${rule.branch}' already exists`);
+      }
+      throw error;
+    }
+  }
+
+  listCustomRules() {
+    const rows = this.database.prepare("SELECT * FROM custom_rules ORDER BY id ASC").all();
+    return rows.map((row) => {
+      const parsed = JSON.parse(row.rule_json);
+      return {
+        id: row.id,
+        ruleId: row.rule_id,
+        branch: row.branch,
+        ruleName: row.name,
+        targetSource: row.target_source,
+        pattern: row.pattern,
+        assessment: row.assessment,
+        classification: row.classification,
+        confidence: row.confidence,
+        recommendedActions: parsed.recommendedActions ?? [],
+        createdBy: row.created_by,
+        createdAt: row.created_at
+      };
+    });
+  }
+
+  getCustomRuleByBranch(branch) {
+    const row = this.database.prepare("SELECT * FROM custom_rules WHERE branch = ?").get(branch);
+    if (!row) return null;
+    const parsed = JSON.parse(row.rule_json);
+    return {
+      id: row.id,
+      ruleId: row.rule_id,
+      branch: row.branch,
+      ruleName: row.name,
+      targetSource: row.target_source,
+      pattern: row.pattern,
+      assessment: row.assessment,
+      classification: row.classification,
+      confidence: row.confidence,
+      recommendedActions: parsed.recommendedActions ?? [],
+      createdBy: row.created_by,
+      createdAt: row.created_at
+    };
+  }
+
+  getCustomRuleById(id) {
+    const row = this.database.prepare("SELECT * FROM custom_rules WHERE id = ?").get(id);
+    if (!row) return null;
+    const parsed = JSON.parse(row.rule_json);
+    return {
+      id: row.id,
+      ruleId: row.rule_id,
+      branch: row.branch,
+      ruleName: row.name,
+      targetSource: row.target_source,
+      pattern: row.pattern,
+      assessment: row.assessment,
+      classification: row.classification,
+      confidence: row.confidence,
+      recommendedActions: parsed.recommendedActions ?? [],
+      createdBy: row.created_by,
+      createdAt: row.created_at
+    };
   }
 
   close() {
