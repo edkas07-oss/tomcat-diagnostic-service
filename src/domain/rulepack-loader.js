@@ -19,6 +19,7 @@ export class DynamicRuleEvaluator {
   registerRule(rule) {
     const compiled = {
       ...rule,
+      category: rule.category ?? "general",
       regex: new RegExp(rule.pattern, "i")
     };
     const existingIndex = this.rules.findIndex((r) => r.branch === rule.branch);
@@ -30,8 +31,9 @@ export class DynamicRuleEvaluator {
     return compiled;
   }
 
-  getRules() {
-    return this.rules.map(({ regex, ...rule }) => rule);
+  getRules(category = null) {
+    const filtered = category ? this.rules.filter((r) => r.category === category) : this.rules;
+    return filtered.map(({ regex, ...rule }) => rule);
   }
 
   getRuleByBranch(branch) {
@@ -67,6 +69,7 @@ export class DynamicRuleEvaluator {
           ruleId: rule.ruleId ?? "TomcatDown",
           ruleVersion: rule.ruleVersion ?? "1",
           branch: rule.branch,
+          category: rule.category ?? "general",
           assessment: rule.assessment,
           classification: rule.classification,
           confidence: rule.confidence ?? null,

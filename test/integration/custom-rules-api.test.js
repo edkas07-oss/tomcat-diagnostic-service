@@ -115,10 +115,11 @@ test("Rules API strict guards, persistence, hot-reload, and 405 rejection", asyn
     assert.equal(builtinCollision.status, 409);
     assert.equal(builtinCollision.json.error, "rule_branch_conflict");
 
-    // 7. POST /api/v1/rules valid TD-09 rule -> 201 Created & Hot-Loaded
+    // 7. POST /api/v1/rules valid TD-09 rule with category -> 201 Created & Hot-Loaded
     const validRule = {
       branch: "TD-09",
       ruleName: "DatabaseConnectionPoolExhausted",
+      category: "database_persistence",
       targetSource: "local_file",
       pattern: "CannotGetJdbcConnectionException",
       assessment: "Tomcat unresponsive: Database connection pool exhausted",
@@ -136,6 +137,7 @@ test("Rules API strict guards, persistence, hot-reload, and 405 rejection", asyn
     assert.equal(created.status, 201);
     assert.equal(created.json.branch, "TD-09");
     assert.equal(created.json.ruleName, "DatabaseConnectionPoolExhausted");
+    assert.equal(created.json.category, "database_persistence");
 
     // 8. Hot-reload check: in-memory evaluator immediately evaluates evidence matching TD-09
     const evidence = [
@@ -144,6 +146,22 @@ test("Rules API strict guards, persistence, hot-reload, and 405 rejection", asyn
     const evaluated = evaluator.evaluate(evidence);
     assert.equal(evaluated.branch, "TD-09");
     assert.equal(evaluated.classification, "confirmed_cause");
+    assert.equal(evaluated.category, "database_persistence");
+
+    // 8b. Category filtering check: GET /api/v1/rules?category=database_persistence -> total: 1
+    const dbFilter = await send(`${baseUrl}/api/v1/rules?category=database_persistence`, {
+      headers: { authorization: `Bearer ${token}` }
+    });
+    assert.equal(dbFilter.status, 200);
+    assert.equal(dbFilter.json.total, 1);
+    assert.equal(dbFilter.json.rules[0].branch, "TD-09");
+
+    // 8c. Category filtering check: GET /api/v1/rules?category=jvm_memory -> total: 0
+    const memFilter = await send(`${baseUrl}/api/v1/rules?category=jvm_memory`, {
+      headers: { authorization: `Bearer ${token}` }
+    });
+    assert.equal(memFilter.status, 200);
+    assert.equal(memFilter.json.total, 0);
 
     // 9. POST /api/v1/rules duplicate branch -> 409 Conflict
     const duplicate = await send(`${baseUrl}/api/v1/rules`, {
@@ -159,6 +177,7 @@ test("Rules API strict guards, persistence, hot-reload, and 405 rejection", asyn
     });
     assert.equal(getDetail.status, 200);
     assert.equal(getDetail.json.branch, "TD-09");
+    assert.equal(getDetail.json.category, "database_persistence");
 
     // 11. PUT /api/v1/rules/TD-09 -> 405 Method Not Allowed
     const putRes = await send(`${baseUrl}/api/v1/rules/TD-09`, {

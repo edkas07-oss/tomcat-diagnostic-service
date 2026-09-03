@@ -14,11 +14,12 @@ test("isSafeRegex detects unsafe and safe regex patterns", () => {
   assert.equal(isSafeRegex("[invalid(regex"), false);
 });
 
-test("createRulepackValidator accepts valid rulepack payload", () => {
+test("createRulepackValidator accepts valid rulepack payload with category", () => {
   const validator = createRulepackValidator(schemaPath);
   const validRule = {
     branch: "TD-09",
     ruleName: "DatabaseConnectionPoolExhausted",
+    category: "database_persistence",
     targetSource: "local_file",
     pattern: "CannotGetJdbcConnectionException",
     assessment: "Tomcat unresponsive: Database connection pool exhausted",
@@ -31,6 +32,23 @@ test("createRulepackValidator accepts valid rulepack payload", () => {
   };
   const result = validator(validRule);
   assert.equal(result.valid, true);
+});
+
+test("createRulepackValidator rejects invalid category enum", () => {
+  const validator = createRulepackValidator(schemaPath);
+  const invalidCategory = {
+    branch: "TD-09",
+    ruleName: "InvalidCategoryRule",
+    category: "unsupported_domain_category",
+    targetSource: "local_file",
+    pattern: "CannotGetJdbcConnectionException",
+    assessment: "Tomcat unresponsive: Database connection pool exhausted",
+    classification: "confirmed_cause",
+    confidence: "high",
+    recommendedActions: ["Action 1"]
+  };
+  const result = validator(invalidCategory);
+  assert.equal(result.valid, false);
 });
 
 test("createRulepackValidator rejects invalid schema or inconsistent confidence", () => {

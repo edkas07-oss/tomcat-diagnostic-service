@@ -166,16 +166,18 @@ export class SqliteRepository {
       throw new RuleCollisionError(`Branch '${rule.branch}' already exists in custom rules`);
     }
     const ruleId = rule.ruleId ?? "TomcatDown";
-    const ruleJson = JSON.stringify(rule);
+    const category = rule.category ?? "general";
+    const ruleJson = JSON.stringify({ ...rule, category });
     const createdAt = new Date().toISOString();
     try {
       const result = this.database.prepare(`
-        INSERT INTO custom_rules(rule_id, branch, name, target_source, pattern, assessment, classification, confidence, rule_json, created_by, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO custom_rules(rule_id, branch, name, category, target_source, pattern, assessment, classification, confidence, rule_json, created_by, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         ruleId,
         rule.branch,
         rule.ruleName,
+        category,
         rule.targetSource,
         rule.pattern,
         rule.assessment,
@@ -190,6 +192,7 @@ export class SqliteRepository {
         ruleId,
         branch: rule.branch,
         ruleName: rule.ruleName,
+        category,
         targetSource: rule.targetSource,
         pattern: rule.pattern,
         assessment: rule.assessment,
@@ -207,8 +210,10 @@ export class SqliteRepository {
     }
   }
 
-  listCustomRules() {
-    const rows = this.database.prepare("SELECT * FROM custom_rules ORDER BY id ASC").all();
+  listCustomRules(category = null) {
+    const rows = category
+      ? this.database.prepare("SELECT * FROM custom_rules WHERE category = ? ORDER BY id ASC").all(category)
+      : this.database.prepare("SELECT * FROM custom_rules ORDER BY id ASC").all();
     return rows.map((row) => {
       const parsed = JSON.parse(row.rule_json);
       return {
@@ -216,6 +221,7 @@ export class SqliteRepository {
         ruleId: row.rule_id,
         branch: row.branch,
         ruleName: row.name,
+        category: row.category ?? parsed.category ?? "general",
         targetSource: row.target_source,
         pattern: row.pattern,
         assessment: row.assessment,
@@ -237,6 +243,7 @@ export class SqliteRepository {
       ruleId: row.rule_id,
       branch: row.branch,
       ruleName: row.name,
+      category: row.category ?? parsed.category ?? "general",
       targetSource: row.target_source,
       pattern: row.pattern,
       assessment: row.assessment,
@@ -257,6 +264,7 @@ export class SqliteRepository {
       ruleId: row.rule_id,
       branch: row.branch,
       ruleName: row.name,
+      category: row.category ?? parsed.category ?? "general",
       targetSource: row.target_source,
       pattern: row.pattern,
       assessment: row.assessment,

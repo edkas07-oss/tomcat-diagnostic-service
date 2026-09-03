@@ -27,6 +27,19 @@
       "minLength": 3,
       "maxLength": 64
     },
+    "category": {
+      "type": "string",
+      "enum": [
+        "jvm_memory",
+        "concurrency_threading",
+        "database_persistence",
+        "network_integration",
+        "application_lifecycle",
+        "storage_os_limits",
+        "security_session",
+        "general"
+      ]
+    },
     "targetSource": {
       "type": "string",
       "enum": ["local_file", "prometheus", "collector", "application_health", "any"]

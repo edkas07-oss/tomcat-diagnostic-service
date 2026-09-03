@@ -94,11 +94,12 @@ export function sections(result) {
     `Waktu Selesai: ${result.endsAt || (isResolved ? "selesai / pulih" : "masih berlangsung (aktif)")}`
   ].join("\n");
 
+  const categoryStr = result.assessment?.category ? `\nKategori Domain: ${result.assessment.category}` : "";
   const diagnosticAssessment = [
     `Status Pemrosesan: ${result.processingStatus === "completed" ? "Selesai (Completed)" : result.processingStatus}`,
     `Klasifikasi: ${result.assessment?.classification}`,
     `Hasil Diagnosis Utama: ${result.assessment?.assessment}`,
-    `Branch Keputusan Engine: ${result.assessment?.branch}${confidenceStr}`
+    `Branch Keputusan Engine: ${result.assessment?.branch}${confidenceStr}${categoryStr}`
   ].join("\n");
 
   const keyMetrics = formatTelemetryEvidence(result.evidence);

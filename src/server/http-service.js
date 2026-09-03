@@ -22,7 +22,9 @@ export function createRequestHandler(options) {
   const rulesLimitBytes = 64 * 1024;
 
   return async (request, response) => {
-    const url = request.url?.split("?", 1)[0] ?? "";
+    const urlObj = new URL(request.url ?? "/", "http://localhost");
+    const url = urlObj.pathname;
+    const categoryQuery = urlObj.searchParams.get("category");
 
     if (request.method === "GET" && url === "/health/live") return json(response, 200, { status: "UP" });
     if (request.method === "GET" && url === "/health/ready") return json(response, options.health.health().ready ? 200 : 503, options.health.health());
@@ -72,9 +74,9 @@ export function createRequestHandler(options) {
 
       if (request.method === "GET" && url === "/api/v1/rules") {
         const rules = options.ruleEvaluator
-          ? options.ruleEvaluator.getRules()
-          : (options.repository ? options.repository.listCustomRules() : []);
-        return json(response, 200, { rules, total: rules.length });
+          ? options.ruleEvaluator.getRules(categoryQuery)
+          : (options.repository ? options.repository.listCustomRules(categoryQuery) : []);
+        return json(response, 200, { rules, total: rules.length, ...(categoryQuery ? { category: categoryQuery } : {}) });
       }
 
       if (request.method === "GET" && url.startsWith("/api/v1/rules/")) {
