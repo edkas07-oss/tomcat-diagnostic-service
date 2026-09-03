@@ -12,12 +12,14 @@ Layanan ini dirancang berdasarkan prinsip **Deterministic Honesty** dan **Human-
 2. **Deterministic & Declarative Rulepack Engine:** Pohon keputusan deterministik 18 cabang:
    - **8 Built-in Branches (`TD-01` s/d `TD-08`):** TLS scrape unavailable, OOM Killed, JVM Crash, Port bind conflict, Orderly shutdown, Container exited unknown, Contradicting state, dan Undetermined evidence.
    - **10 Curated Custom Branches (`TD-09` s/d `TD-18`):** Database pool exhaustion, Thread pool exhaustion, Heap OOM, Metaspace OOM, SSL Handshake failure, HikariCP timeout, Context init failure, Thread deadlock, Socket read timeout, dan SQL timeout.
-3. **Safe Hot-Reload Rules API (`/api/v1/rules`):**
+3. **Formal Rule Categorization (*Failure Domains*):** Pengelompokan aturan diagnosis berbasis 8 enum kategori resmi (`jvm_memory`, `concurrency_threading`, `database_persistence`, `network_integration`, `application_lifecycle`, `storage_os_limits`, `security_session`, `general`) pada skema JSON, SQLite, dan laporan email.
+4. **Safe Hot-Reload Rules API (`/api/v1/rules`):**
    - Ingestion aturan baru secara *live* tanpa *restart container* (*zero-downtime hot-reload*).
+   - Ekspor dan filtering katalog aturan berbasis domain query parameter (`GET /api/v1/rules?category=<name>`).
    - Dilindungi oleh **5-Layer Ingestion Defense-in-Depth** (Auth Guard, Schema Guard, Collision Guard, Payload Size Guard, dan Append-Only Immutability Guard).
-4. **Resilient Notification Delivery:** Single worker loop dengan retry berbatas (*exponential backoff* 1s & 5s, maks 3 percobaan) dan korelasi *resolved state*.
-5. **SQLite Persistence:** Migrasi schema forward-only (`001` s/d `005`), tabel `events`, `incidents`, `canonical_results`, `evidence_summaries`, `delivery_attempts`, `notification_attempts`, dan `custom_rules`.
-6. **Observability:** Endpoint `/health/live`, `/health/ready`, dan `/metrics` (Prometheus text format).
+5. **Resilient Notification Delivery:** Single worker loop dengan retry berbatas (*exponential backoff* 1s & 5s, maks 3 percobaan) dan korelasi *resolved state*.
+6. **SQLite Persistence:** Migrasi schema forward-only (`001` s/d `006`), tabel `events`, `incidents`, `canonical_results`, `evidence_summaries`, `delivery_attempts`, `notification_attempts`, dan `custom_rules` (termasuk kolom `category`).
+7. **Observability:** Endpoint `/health/live`, `/health/ready`, dan `/metrics` (Prometheus text format).
 
 ---
 
@@ -41,25 +43,26 @@ tomcat-diagnostic-service/
 ├── Containerfile      Digest-pinned application container image
 ├── PROJECT            Identitas project yang dapat dibaca script
 ├── README.md          Spesifikasi kontrak dan status implementasi
-├── VERSION            Versi rilis aplikasi (saat ini: 0.1.3)
+├── VERSION            Versi rilis aplikasi (saat ini: 0.1.4)
 ├── package.json       Kontrak package ESM dan dependency lock
 ├── package-lock.json  Dependency lock
 ├── config/schemas/    Versioned JSON Schemas:
 │   ├── alertmanager-webhook-v4.schema.json
 │   ├── application-config-v1.schema.json
-│   └── rulepack-v1.schema.json
+│   └── rulepack-v1.schema.json (dengan category enum)
 ├── migrations/        Forward-only SQLite schema migrations:
 │   ├── 001-initial.sql
 │   ├── 002-canonical-results.sql
 │   ├── 003-delivery-attempts.sql
 │   ├── 004-notification-lifecycle.sql
-│   └── 005-custom-rules.sql
+│   ├── 005-custom-rules.sql
+│   └── 006-rule-category.sql
 ├── src/               Kode sumber aplikasi:
 │   ├── adapters/      SQLite repository, SMTP sender, & Evidence collectors
 │   ├── application/   Diagnostic worker, Result renderer, & Notification orchestrator
 │   ├── domain/        Deterministic engine, Rulepack loader, & Dynamic evaluator
 │   └── server/        HTTPS server, Authentication, Routes, & Schema validators
-├── test/              Unit dan temporary-SQLite integration test suites (46 unit tests)
+├── test/              Unit dan temporary-SQLite integration test suites (47 unit tests)
 └── scripts/
     ├── build.sh       Build versioned dan latest local image
     ├── test-image.sh  Static runtime & container image contract probes
@@ -76,7 +79,7 @@ tomcat-diagnostic-service/
 ./scripts/validate.sh
 ```
 
-### 2. Unit & Integration Tests (46 Tests)
+### 2. Unit & Integration Tests (47 Tests)
 ```bash
 podman run --rm -v $(pwd):/app -w /app localhost/nodejs:latest npm test
 ```
@@ -98,6 +101,7 @@ Header Wajib: `Authorization: Bearer <token>`
 | :---: | :--- | :--- | :---: |
 | `POST` | `/api/v1/rules` | Ingest Declarative Rulepack baru (Hot-Reload) | `201 Created` / `400` / `401` / `409` / `413` |
 | `GET` | `/api/v1/rules` | Ekspor seluruh katalog aturan aktif di sistem | `200 OK` / `401 Unauthorized` |
+| `GET` | `/api/v1/rules?category=<name>` | Ekspor aturan spesifik berdasarkan domain kategori | `200 OK` / `401 Unauthorized` |
 | `GET` | `/api/v1/rules/:id` | Ekspor aturan spesifik berdasarkan Branch / ID | `200 OK` / `404 Not Found` |
 | `PUT/DELETE` | `/api/v1/rules/*` | Upaya modifikasi/penghapusan (Ditolak) | `405 Method Not Allowed` |
 
@@ -109,13 +113,14 @@ Header Wajib: `Authorization: Bearer <token>`
 | :--- | :---: | :--- |
 | **Repository Governance & Boundaries** | ✅ Selesai | Pinned toolchain, ESM, no-framework |
 | **Alertmanager Ingestion & Queue** | ✅ Selesai | Webhook v4, deduplikasi, kapasitas 50 |
-| **SQLite Persistence & Migrations** | ✅ Selesai | 5 migration files, zero-data loss |
+| **SQLite Persistence & Migrations** | ✅ Selesai | 6 migration files, zero-data loss |
 | **Decision Engine (TD-01..TD-08)** | ✅ Selesai | Deterministic honesty, 7-section reports |
 | **Custom Rule Engine (TD-09..TD-18)**| ✅ Selesai | Dynamic rulepack evaluation & hot-reloading |
+| **Rule Categorization Engine** | ✅ Selesai | 8 failure domain enums, filtering API, email label |
 | **Rules API & 5-Layer Defense** | ✅ Selesai | Auth, schema, collision, size, immutability |
 | **SMTP Delivery & Resolved Correlation**| ✅ Selesai | Exponential retry, clean HTML/Text reports |
 | **Persistent Lab Deployment** | ✅ Selesai | Aktif di `devops-lab` container network |
-| **Automated Verification Suites** | ✅ Selesai | 100% lulus pada 46 unit test & end-to-end suites |
+| **Automated Verification Suites** | ✅ Selesai | 100% lulus pada 47 unit test & end-to-end suites |
 
 ---
 
