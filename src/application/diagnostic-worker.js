@@ -1,3 +1,14 @@
+/**
+ * @file src/application/diagnostic-worker.js
+ * @project Tomcat Diagnostic Service
+ * @description Worker asinkron loop tunggal (Single Worker Loop) untuk pemrosesan antrean dan eksekusi diagnosis insiden.
+ *
+ * Prinsip & Batasan Arsitektur (TN-007):
+ * - Sequential Processing: Memproses antrean satu per satu (concurrency = 1) untuk mencegah race condition / lock contention.
+ * - Evidence & Evaluation Pipeline: Mengambil bukti terisolasi, mengevaluasi aturan deterministik, dan menyusun hasil kanonikal v1.
+ * - Transactional Completion: Menyimpan canonical result dan evidence summary sebelum menandai item antrean `completed`.
+ */
+
 import { buildCanonicalResult, isMaterialChange } from "../domain/canonical-result.js";
 import { evaluateTomcatDown } from "../domain/tomcat-down-engine.js";
 import { renderResult } from "./result-renderer.js";

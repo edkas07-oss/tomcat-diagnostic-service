@@ -1,3 +1,14 @@
+/**
+ * @file src/adapters/collector-spool-adapter.js
+ * @project Tomcat Diagnostic Service
+ * @description Adapter pembaca bukti file spool status runtime container dari spool collector.
+ *
+ * Prinsip & Batasan Arsitektur (TN-006):
+ * - Spool Ingestion: Membaca berkas `.json` status runtime container yang ditulis atomik oleh collector.
+ * - Window Isolation: Memfilter rekaman hanya yang berada dalam jendela waktu observasi insiden.
+ * - File Limit: Membatasi pemrosesan maksimal 200 berkas spool terbaru dengan batas per berkas 16 KiB.
+ */
+
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { readBoundedFile } from "./bounded-file-reader.js";

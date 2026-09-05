@@ -1,3 +1,14 @@
+/**
+ * @file src/domain/evidence.js
+ * @project Tomcat Diagnostic Service
+ * @description Domain model pembentukan bukti telemetri kanonikal terisolasi untuk analisis insiden.
+ *
+ * Prinsip & Batasan Arsitektur (TN-006):
+ * - Canonical Evidence Model: Menstandarkan tipe, status, strength, dan payload bukti dalam bentuk objek kanonikal.
+ * - Deterministic Evidence ID: Menghasilkan SHA-256 evidence ID unik berdasarkan data kanonikal.
+ * - Time Window Isolation: Membatasi observasi bukti telemetri hanya pada jendela waktu insiden (`startsAt ± delta`).
+ */
+
 import { createHash } from "node:crypto";
 
 export const EVIDENCE_STATUSES = new Set([

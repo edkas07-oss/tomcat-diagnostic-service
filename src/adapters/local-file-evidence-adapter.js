@@ -1,3 +1,14 @@
+/**
+ * @file src/adapters/local-file-evidence-adapter.js
+ * @project Tomcat Diagnostic Service
+ * @description Adapter pembaca bukti file lokal (log catalina, thread dump) dengan sensor redaksi data sensitif.
+ *
+ * Prinsip & Batasan Arsitektur (TN-006):
+ * - Target Isolation: Membaca path file log target via bounded file reader terisolasi.
+ * - Secret Redaction: Meredaksi otomatis token, password, authorization, dan API keys.
+ * - Error Containment: Mengonversi ENOENT atau filesystem errors ke status kanonikal `not_found`/`unavailable`.
+ */
+
 import { readBoundedFile } from "./bounded-file-reader.js";
 import { createEvidence } from "../domain/evidence.js";
 

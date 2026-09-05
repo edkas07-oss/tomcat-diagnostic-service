@@ -1,3 +1,14 @@
+/**
+ * @file src/application/target-registry.js
+ * @project Tomcat Diagnostic Service
+ * @description Registri target terisolasi untuk memetakan identitas target ke path bukti dan endpoint telemetri.
+ *
+ * Prinsip & Batasan Arsitektur (TN-006):
+ * - Target Allowlist: Membentuk canonical target ID (`environment/host/tomcat_instance`) dan menolak target tak terdaftar.
+ * - Path Safety: Mewajibkan absolute normalized path tanpa traversal (`..`) atau symlink untuk direktori log dan spool.
+ * - Selector & URL Integrity: Memvalidasi exact-match label Prometheus dan mewajibkan skema HTTPS pada health endpoint.
+ */
+
 import { isAbsolute, normalize } from "node:path";
 
 export function canonicalTargetId(identity) {

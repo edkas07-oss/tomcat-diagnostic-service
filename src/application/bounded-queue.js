@@ -1,3 +1,14 @@
+/**
+ * @file src/application/bounded-queue.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengelola antrean kerja berbatas kapasitas (Bounded Queue) untuk tugas diagnosis asinkron.
+ *
+ * Prinsip & Batasan Arsitektur (TN-005):
+ * - Kapasitas Berbatas Ketat: Default kapasitas maksimum 50 item antrean (`work_queue`) untuk mencegah kehabisan memori/disk.
+ * - Penolakan Transaksional: Melempar `QueueCapacityError` ketika batas kapasitas terlampaui sehingga request di-rollback.
+ * - Interface Sekuensial: Menyediakan batas kontrak claim dan complete bagi worker pemroses.
+ */
+
 export class QueueCapacityError extends Error {
   constructor(limit) {
     super(`accepted-work queue capacity ${limit} reached`);

@@ -1,3 +1,15 @@
+/**
+ * @file src/application/ingest-alertmanager.js
+ * @project Tomcat Diagnostic Service
+ * @description Modul penyerapan dan normalisasi payload webhook notifikasi insiden dari Alertmanager v4.
+ *
+ * Prinsip & Batasan Arsitektur (TN-005):
+ * - Validasi Skema & Allowlist: Memeriksa integritas envelope dan memastikan identitas target terdaftar pada allowlist lokal.
+ * - Deterministic Event Key: Membentuk hash SHA-256 unik (`fingerprint + status + eventTime`) untuk deduplikasi event.
+ * - Canonical Timestamps: Menormalisasi format waktu startsAt/endsAt ke standar RFC 3339 UTC.
+ * - Queue Ingestion Boundary: Meneruskan data event yang telah dinormalisasi ke antrean kerja berbatas (`BoundedWorkQueue`).
+ */
+
 import { createHash } from "node:crypto";
 
 export class IngestionValidationError extends Error {

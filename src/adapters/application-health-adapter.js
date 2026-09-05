@@ -1,3 +1,14 @@
+/**
+ * @file src/adapters/application-health-adapter.js
+ * @project Tomcat Diagnostic Service
+ * @description Adapter probe status HTTP endpoint `/health` aplikasi Tomcat.
+ *
+ * Prinsip & Batasan Arsitektur (TN-006):
+ * - Health Probe: Memeriksa ketersediaan aplikasi web via endpoint HTTPS `/health`.
+ * - Aggressive Timeout: Membatasi probe HTTP dengan timeout ketat (default 3000ms).
+ * - Non-leaking Payload: Hanya mencatat `up` (boolean) dan `httpStatus`, tanpa menyimpan body respons aplikasi.
+ */
+
 import { createEvidence } from "../domain/evidence.js";
 
 export async function collectApplicationHealth(target, context, { fetchImpl = globalThis.fetch, timeoutMs = 3000 } = {}) {

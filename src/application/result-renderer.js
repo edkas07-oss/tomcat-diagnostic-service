@@ -1,3 +1,14 @@
+/**
+ * @file src/application/result-renderer.js
+ * @project Tomcat Diagnostic Service
+ * @description Renderer laporan diagnosis insiden format 7-seksi Enterprise SRE (HTML responsif & Plain Text).
+ *
+ * Prinsip & Batasan Arsitektur (TN-007):
+ * - 7-Section SRE Standard: Menghasilkan laporan dengan struktur seksi terstandarisasi untuk notifikasi insiden.
+ * - HTML Safety: Melakukan sanitasi/escaping karakter khusus HTML (`&`, `<`, `>`, `"`) untuk mencegah injection.
+ * - Dual Payload: Menghasilkan format multipart (HTML untuk email client kaya dan Plain Text sebagai fallback).
+ */
+
 const escapeHtml = (value) => String(value ?? "")
   .replaceAll("&", "&amp;")
   .replaceAll("<", "&lt;")

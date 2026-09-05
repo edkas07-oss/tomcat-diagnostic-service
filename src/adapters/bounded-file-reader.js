@@ -1,3 +1,14 @@
+/**
+ * @file src/adapters/bounded-file-reader.js
+ * @project Tomcat Diagnostic Service
+ * @description Pembaca file sistem lokal dengan batas ukuran, jumlah baris, dan proteksi path traversal ketat.
+ *
+ * Prinsip & Batasan Arsitektur (TN-006):
+ * - Anti-Traversal: Menolak path relatif yang keluar dari direktori root terkonfigurasi.
+ * - Anti-Symlink: Menolak symbolic link guna mencegah eksfiltrasi file host di luar direktori aman.
+ * - Resource Bounded: Membatasi pembacaan maksimal buffer byte (`maxBytes`) dan baris (`maxLines`).
+ */
+
 import { lstatSync, openSync, closeSync, readSync, realpathSync } from "node:fs";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 

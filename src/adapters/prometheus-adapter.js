@@ -1,3 +1,14 @@
+/**
+ * @file src/adapters/prometheus-adapter.js
+ * @project Tomcat Diagnostic Service
+ * @description Adapter pengambilan metrik telemetri Prometheus API dengan label selector exact-match.
+ *
+ * Prinsip & Batasan Arsitektur (TN-006):
+ * - Scrape Bounded: Mengambil metrik instan melalui HTTP API `/api/v1/query`.
+ * - Selector Isolation: Menggabungkan kueri hanya dengan `prometheusSelector` exact-match dari target allowlist.
+ * - Timeout Bound: Membatasi kueri dengan batas waktu timeout agresif (default 5000ms).
+ */
+
 import { createEvidence } from "../domain/evidence.js";
 
 export class PrometheusAdapter {

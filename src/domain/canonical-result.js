@@ -1,3 +1,14 @@
+/**
+ * @file src/domain/canonical-result.js
+ * @project Tomcat Diagnostic Service
+ * @description Domain model pembentukan Canonical Result v1 dan deteksi perubahan material insiden.
+ *
+ * Prinsip & Batasan Arsitektur (TN-007):
+ * - Canonical Schema v1: Membentuk objek hasil diagnosis terstandardisasi dengan stabilitas urutan key/array.
+ * - Deterministic Result Hash: Menghitung SHA-256 hash inti hasil evaluasi tanpa melibatkan timestamp volatil.
+ * - Material Change Guard: Mendeteksi apakah pembaruan status insiden bersifat material (mengubah klasifikasi/asesmen) sebelum mengirim notifikasi baru.
+ */
+
 import { createHash } from "node:crypto";
 
 const statuses = new Set(["completed", "partially_completed", "failed", "unsupported", "skipped", "resolved_without_previous_firing"]);

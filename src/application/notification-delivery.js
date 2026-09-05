@@ -1,3 +1,14 @@
+/**
+ * @file src/application/notification-delivery.js
+ * @project Tomcat Diagnostic Service
+ * @description Orkestrator pengiriman notifikasi insiden dengan kebijakan retry terikat (bounded retry policy).
+ *
+ * Prinsip & Batasan Arsitektur (TN-008, TN-012):
+ * - Bounded Retry Policy: Maksimal 3 kali percobaan (attempt 1, backoff 1s, backoff 5s) dengan usia maksimal 60 detik.
+ * - Categorized Error Codes: Memetakan kegagalan transport ke kode kanonikal (`timeout`, `authentication`, `connection`, `smtp_5xx`, `smtp_4xx`).
+ * - Idempotent Persistence: Mencatat setiap riwayat upaya pengiriman ke tabel `notification_attempts`.
+ */
+
 const defaultSleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 export const NOTIFICATION_RETRY_POLICY = Object.freeze({
