@@ -1,3 +1,14 @@
+/**
+ * @file src/domain/rulepack-loader.js
+ * @project Tomcat Diagnostic Service
+ * @description Dynamic Rule Evaluator (Layer 2) dan Loader Declarative Rulepack.
+ *
+ * Menggabungkan evaluasi aturan dinamis dengan mesin bawaan:
+ * - Mengompilasi pola regex aturan deklaratif dalam memori secara hot-reload.
+ * - Memprioritaskan pencocokan custom rules (TD-09+) terhadap bukti log/spool.
+ * - Melakukan fallback mulus ke Decision Engine Layer 1 (TD-01..TD-08) jika tidak ada rule deklaratif yang cocok.
+ */
+
 import { evaluateTomcatDown } from "./tomcat-down-engine.js";
 
 const BUILTIN_BRANCHES = new Set([

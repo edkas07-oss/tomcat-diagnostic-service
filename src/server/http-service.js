@@ -1,3 +1,18 @@
+/**
+ * @file src/server/http-service.js
+ * @project Tomcat Diagnostic Service
+ * @description Server HTTPS internal dan Request Handler antarmuka eksternal.
+ *
+ * Endpoint yang Dilayani:
+ * - `POST /api/v1/alerts` : Webhook ingestion Alertmanager v4 (Bearer auth timing-safe, batas 256 KiB).
+ * - `GET /health`         : Status ketersediaan layanan untuk scrape Prometheus / probing liveness.
+ * - `GET /health/live`    : Kubernetes/Podman liveness probe.
+ * - `GET /health/ready`   : Readiness probe (aktif setelah migrasi database sukses).
+ * - `GET /metrics`        : Metrik operasional internal format Prometheus text format.
+ * - `POST /api/v1/rules`  : Declarative Rulepack Ingestion (5-Layer Guard: Auth, Schema, Collision, Size, Append-only).
+ * - `GET /api/v1/rules`   : Export katalog aturan dengan filter domain `?category=<enum>`.
+ */
+
 import { createServer } from "node:https";
 import { timingSafeEqual } from "node:crypto";
 import { IngestionValidationError, ingestAlertmanager } from "../application/ingest-alertmanager.js";

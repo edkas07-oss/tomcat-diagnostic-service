@@ -1,3 +1,11 @@
+-- ==============================================================================
+-- Migration : 002-canonical-results.sql
+-- Project   : Tomcat Diagnostic Service
+-- Origin    : TN-007 (Implement Worker Canonical Result and Renderers)
+-- Purpose   : Persistensi hasil evaluasi diagnosis kanonikal (canonical results),
+--             ringkasan bukti (evidence summaries), dan batas pembaruan materiil.
+-- ==============================================================================
+
 ALTER TABLE incidents ADD COLUMN material_update_count INTEGER NOT NULL DEFAULT 0;
 
 CREATE TABLE canonical_results (

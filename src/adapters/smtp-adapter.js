@@ -1,3 +1,15 @@
+/**
+ * @file src/adapters/smtp-adapter.js
+ * @project Tomcat Diagnostic Service
+ * @description Adapter pengiriman email laporan diagnosis insiden via SMTP (Nodemailer).
+ *
+ * Batasan Keamanan (TN-008, TN-012):
+ * - Menggunakan client exact-pinned `nodemailer@9.0.6` dengan zero transitive dependencies.
+ * - Mengisolasi transport: `disableFileAccess: true` dan `disableUrlAccess: true` untuk mencegah kebocoran file lokal.
+ * - Menerapkan batas waktu ketat: connectionTimeout, greetingTimeout, dan socketTimeout.
+ * - Menghasilkan email multipart (HTML + Plain Text) laporan 7 seksi Enterprise SRE ke Mailpit / relay server.
+ */
+
 import nodemailer from "nodemailer";
 
 export class SmtpAdapter {

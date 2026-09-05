@@ -17,6 +17,10 @@
     "ajv": "8.20.0",
     "nodemailer": "9.0.6"
   },
+  "dependenciesNotes": {
+    "ajv": "8.20.0 - Dipin pada TN-005 untuk kompilasi dan validasi JSON Schema Draft-07 pada webhook Alertmanager v4 dan Declarative Rulepack v1 (TM-ADR-0013, TN-005, TN-018)",
+    "nodemailer": "9.0.6 - Dipin pada TN-008 untuk bounded SMTP client pengiriman notifikasi diagnosis terisolasi ke Mailpit dengan zero transitive dependencies (TN-008, TN-012)"
+  },
   "engines": {
     "node": "24.18.0"
   }

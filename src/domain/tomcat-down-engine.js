@@ -1,3 +1,19 @@
+/**
+ * @file src/domain/tomcat-down-engine.js
+ * @project Tomcat Diagnostic Service
+ * @description Decision Engine Deterministik Layer 1 untuk insiden TomcatDown (Built-in Branches TD-01..TD-08).
+ *
+ * Pohon Keputusan Built-in:
+ * - TD-01: TLS scrape unavailable
+ * - TD-02: Container terminated by OOM mechanism
+ * - TD-03: JVM terminated abnormally by crash artifact
+ * - TD-04: Port bind conflict prevents startup
+ * - TD-05: Orderly shutdown requested
+ * - TD-06: Container exited with unknown state
+ * - TD-07: Telemetry unconfirmed but runtime exited
+ * - TD-08: Cause undetermined from contradicting evidence / insufficient evidence
+ */
+
 const found = (evidence, type, predicate = () => true) => evidence.some((item) => item.type === type && predicate(item.value, item));
 
 const result = (branch, assessment, classification, confidence = null) => ({

@@ -1,3 +1,17 @@
+/**
+ * @file src/application/application.js
+ * @project Tomcat Diagnostic Service
+ * @description Komposer siklus hidup aplikasi (Application Lifecycle Composer).
+ *
+ * Mengoordinasikan seluruh sub-sistem Diagnostic Service:
+ * - Inisialisasi dan migrasi forward-only SQLite repository (isolated single writer).
+ * - Bounded work queue (kapasitas 50) dan single diagnostic worker loop.
+ * - DynamicRuleEvaluator (Layer 1 Built-in TD-01..08 + Layer 2 Ingested Rules).
+ * - Bounded notification delivery via SMTP (Mailpit).
+ * - Server HTTPS TLS internal dengan endpoint webhook, health, metrics, dan Rules API.
+ * - Penegakan prinsip Zero Automatic Remediation (TM-ADR-0014).
+ */
+
 import { once } from "node:events";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

@@ -1,3 +1,13 @@
+/**
+ * @file src/server/webhook-schema.js
+ * @project Tomcat Diagnostic Service
+ * @description Kompilasi skema validasi webhook Alertmanager v4 menggunakan Ajv (Draft-07).
+ *
+ * Batasan Teknis (TM-ADR-0013, TN-005):
+ * - Menggunakan validator exact-pinned `ajv@8.20.0` dalam mode strict.
+ * - Memvalidasi format payload alert webhook: alerts envelope, status, labels, annotations, startsAt RFC3339.
+ */
+
 import { readFileSync } from "node:fs";
 import Ajv from "ajv";
 

@@ -60,6 +60,7 @@ required_files=(
     migrations/003-delivery-attempts.sql
     migrations/004-notification-lifecycle.sql
     migrations/005-custom-rules.sql
+    migrations/006-rule-category.sql
     src/adapters/application-health-adapter.js
     src/adapters/bounded-file-reader.js
     src/adapters/collector-spool-adapter.js

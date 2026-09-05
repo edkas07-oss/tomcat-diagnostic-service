@@ -1,3 +1,16 @@
+/**
+ * @file src/adapters/sqlite-repository.js
+ * @project Tomcat Diagnostic Service
+ * @description Adapter persistensi database SQLite menggunakan engine bawaan `node:sqlite`.
+ *
+ * Prinsip & Batasan Arsitektur:
+ * - Isolated Single Writer (TM-ADR-0013, TM-ADR-0015): Mengisolasi seluruh akses SQLite dalam satu adapter.
+ * - File permission ketat `0600` pada disk fisik, WAL journal mode, dan PRAGMA foreign_keys = ON.
+ * - Migrasi forward-only terurut (`migrations/*.sql`) yang dieksekusi sebelum service siap menerima trafik.
+ * - Mengelola tabel: requests, incidents, events, work_queue, canonical_results, evidence_summaries,
+ *   notification_attempts, dan custom_rules (termasuk category).
+ */
+
 import { chmodSync, readFileSync, readdirSync } from "node:fs";
 import { basename, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";

@@ -1,3 +1,11 @@
+-- ==============================================================================
+-- Migration : 003-delivery-attempts.sql
+-- Project   : Tomcat Diagnostic Service
+-- Origin    : TN-008 (Implement Secure Service and SMTP Delivery Boundaries)
+-- Purpose   : Persistensi riwayat percobaan pengiriman notifikasi email via SMTP
+--             untuk mendukung bounded retry dan audit trail kegagalan/keberhasilan.
+-- ==============================================================================
+
 CREATE TABLE notification_attempts (
     id INTEGER PRIMARY KEY,
     result_id INTEGER NOT NULL REFERENCES canonical_results(id),

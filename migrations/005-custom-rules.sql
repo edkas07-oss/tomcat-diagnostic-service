@@ -1,3 +1,11 @@
+-- ==============================================================================
+-- Migration : 005-custom-rules.sql
+-- Project   : Tomcat Diagnostic Service
+-- Origin    : TN-018 (Implement Strict Declarative Rulepack Engine)
+-- Purpose   : Persistensi aturan deklaratif dinamis (custom rules) hasil sintesis
+--             AI atau input SRE, dengan proteksi branch unik (anti-collision).
+-- ==============================================================================
+
 CREATE TABLE custom_rules (
     id INTEGER PRIMARY KEY,
     rule_id TEXT NOT NULL,

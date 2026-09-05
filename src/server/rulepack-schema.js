@@ -1,3 +1,13 @@
+/**
+ * @file src/server/rulepack-schema.js
+ * @project Tomcat Diagnostic Service
+ * @description Kompilasi dan validasi Declarative Rulepack v1 menggunakan Ajv (Draft-07).
+ *
+ * Komponen 5-Layer Ingestion Guard (TN-018):
+ * - Layer 2 (Schema Guard): Validasi properti wajib, tipe data, enum klasifikasi, confidence, dan category via Ajv.
+ * - Layer 5 (Safety Guard): Evaluasi keamanan ekspresi reguler (ReDoS protection) melalui `isSafeRegex`.
+ */
+
 import { readFileSync } from "node:fs";
 import Ajv from "ajv";
 

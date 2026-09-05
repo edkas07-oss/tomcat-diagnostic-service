@@ -1,3 +1,11 @@
+-- ==============================================================================
+-- Migration : 001-initial.sql
+-- Project   : Tomcat Diagnostic Service
+-- Origin    : TN-005 (Implement Durable Diagnostic Ingestion and Queue)
+-- Purpose   : Skema dasar persistensi webhook Alertmanager, insiden, event,
+--             dan antrean kerja berbatas (bounded FIFO work queue).
+-- ==============================================================================
+
 CREATE TABLE IF NOT EXISTS schema_migrations (
     version INTEGER PRIMARY KEY,
     name TEXT NOT NULL,

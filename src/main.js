@@ -1,3 +1,15 @@
+/**
+ * @file src/main.js
+ * @project Tomcat Diagnostic Service
+ * @description Entrypoint CLI aplikasi Tomcat Diagnostic Service.
+ *
+ * Tanggung Jawab:
+ * - Parsing argumen CLI `--config <absolute-path>` untuk memuat konfigurasi aplikasi.
+ * - Menginisialisasi dan memulai DiagnosticApplication (migrasi SQLite, HTTPS server, single worker loop).
+ * - Mendaftarkan signal handler OS (SIGTERM dan SIGINT) untuk proses graceful shutdown yang aman.
+ * - Mengembalikan exit code 1 pada kegagalan startup atau shutdown.
+ */
+
 import { resolve } from "node:path";
 import { DiagnosticApplication } from "./application/application.js";
 import { loadApplicationConfig } from "./application/config-loader.js";
