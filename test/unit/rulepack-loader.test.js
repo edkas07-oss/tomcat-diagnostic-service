@@ -1,3 +1,21 @@
+/**
+ * @file test/unit/rulepack-loader.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian unit DynamicRuleEvaluator (deteksi built-in branch, matching custom rule, fallback Layer 1, hot-reload).
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test "isBuiltinBranch detects TD-01 through TD-08":
+ *    - Verifikasi TD-01..TD-08 bernilai true; TD-09 dan nama custom bernilai false.
+ * 2. Test "DynamicRuleEvaluator falls back to built-in engine when no custom rules match":
+ *    - Evaluasi tanpa custom rules -> verifikasi fallback ke evaluasi built-in TD-06.
+ * 3. Test "DynamicRuleEvaluator matches custom rule on local_file log excerpt":
+ *    - Daftarkan rule TD-09 (CannotGetJdbcConnectionException) -> verifikasi matching berhasil dan output diagnosis sesuai rule deklaratif.
+ * 4. Test "DynamicRuleEvaluator supports hot-reloading via registerRule":
+ *    - Evaluasi awal -> fallback TD-08.
+ *    - Registrasikan rule baru secara runtime via `registerRule()` -> verifikasi evaluasi berikutnya langsung match TD-10.
+ */
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import { DynamicRuleEvaluator, isBuiltinBranch } from "../../src/domain/rulepack-loader.js";

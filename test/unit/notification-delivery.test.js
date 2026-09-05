@@ -1,3 +1,20 @@
+/**
+ * @file test/unit/notification-delivery.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian unit orkestrasi NotificationDelivery (bounded retries, exponential backoff, max age, kategorisasi error).
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test "notification delivery persists bounded retries before succeeding":
+ *    - Simulasi kegagalan pada percobaan 1 (ECONNREFUSED) dan percobaan 2 (ETIMEDOUT), lalu sukses di percobaan 3.
+ *    - Verifikasi urutan delay backoff [1000, 5000] dan riwayat pencatatan ke tabel attempts (pending -> failed connection -> pending -> failed timeout -> pending -> sent).
+ * 2. Test "notification delivery stops before retry would exceed maximum age":
+ *    - Konfigurasi maxAgeMs = 999ms (< delay 1000ms).
+ *    - Verifikasi retry dihentikan sebelum melanggar batas umur maksimum.
+ * 3. Test "SMTP errors are reduced to bounded codes":
+ *    - Verifikasi kategorisasi kode kanonikal untuk EAUTH (authentication), 451 (smtp_4xx), 550 (smtp_5xx), dan detail sensitif (unknown).
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { NotificationDelivery, notificationErrorCode } from "../../src/application/notification-delivery.js";

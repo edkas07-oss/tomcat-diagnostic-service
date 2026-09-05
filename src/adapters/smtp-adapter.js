@@ -3,6 +3,18 @@
  * @project Tomcat Diagnostic Service
  * @description Adapter pengiriman email laporan diagnosis insiden via SMTP (Nodemailer).
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. constructor(config, { transport }):
+ *    - Inisialisasi alamat pengirim (from) dan penerima (to).
+ *    - Konfigurasi transport Nodemailer dengan host, port, credentials, timeouts, serta flag proteksi `disableFileAccess` dan `disableUrlAccess`.
+ * 2. send(result, rendered):
+ *    a. Tentukan status lifecycle (`resolved` atau firing/critical).
+ *    b. Format subject email:
+ *       - Jika resolved: `[RESOLVED] [<ENV>] Tomcat Service: <AlertName> Restored (Target: <targetId>)`
+ *       - Jika firing: `[CRITICAL] [<ENV>] Tomcat Service: <AlertName> (Target: <targetId>)`
+ *    c. Kirim pesan multipart melalui `transport.sendMail()` dengan `text` dan `html` ter-render.
+ *
  * Batasan Keamanan (TN-008, TN-012):
  * - Menggunakan client exact-pinned `nodemailer@9.0.6` dengan zero transitive dependencies.
  * - Mengisolasi transport: `disableFileAccess: true` dan `disableUrlAccess: true` untuk mencegah kebocoran file lokal.

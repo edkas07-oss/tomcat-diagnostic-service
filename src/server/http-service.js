@@ -3,6 +3,28 @@
  * @project Tomcat Diagnostic Service
  * @description Server HTTPS internal dan Request Handler antarmuka eksternal.
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. createRequestHandler:
+ *    a. GET /health/live -> respons HTTP 200 { status: "UP" }.
+ *    b. GET /health/ready -> respons HTTP 200 (jika ready) atau 503 Service Unavailable.
+ *    c. GET /metrics -> respons HTTP 200 format Prometheus text/plain.
+ *    d. POST /api/v1/alerts/alertmanager:
+ *       - Validasi method POST, status accepting (graceful shutdown), Bearer auth timing-safe, header application/json.
+ *       - Buffer payload request dengan batas ukuran 256 KiB (HTTP 413 jika melebihi).
+ *       - Eksekusi `ingestAlertmanager()` -> respons HTTP 202 Accepted { accepted, duplicate }.
+ *       - Tangani error validasi (400), target tidak terdaftar (422), kapasitas antrean penuh (429), dan JSON rusak (400).
+ *    e. GET /api/v1/rules:
+ *       - Validasi Bearer auth.
+ *       - Ambil daftar custom rules dari database (opsional filter `?category=`), gabungkan dengan built-in rules, respons HTTP 200.
+ *    f. POST /api/v1/rules:
+ *       - Validasi Bearer auth, content-type JSON, buffer payload max 64 KiB.
+ *       - Validasi JSON Schema Rulepack v1 via `validateRulepack()`.
+ *       - Validasi collision: tolak jika branch sama dengan built-in TD-01..TD-08.
+ *       - Simpan rulepack ke SQLite via `saveCustomRule()` dan mutasi evaluator via `registerRule()`.
+ *       - Respons HTTP 201 Created.
+ *    g. Endpoint lainnya -> respons HTTP 404 Not Found.
+ *
  * Endpoint yang Dilayani:
  * - `POST /api/v1/alerts` : Webhook ingestion Alertmanager v4 (Bearer auth timing-safe, batas 256 KiB).
  * - `GET /health`         : Status ketersediaan layanan untuk scrape Prometheus / probing liveness.

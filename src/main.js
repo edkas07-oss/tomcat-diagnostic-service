@@ -3,6 +3,18 @@
  * @project Tomcat Diagnostic Service
  * @description Entrypoint CLI aplikasi Tomcat Diagnostic Service.
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. configArgument: Ekstrak argumen CLI `--config <path>` dan resolusikan ke path absolut.
+ * 2. main:
+ *    a. Muat dan validasi konfigurasi via `loadApplicationConfig()`.
+ *    b. Instansiasi `DiagnosticApplication` dan jalankan `application.start()` (migrasi DB, HTTPS server, worker loop).
+ *    c. Tangani kegagalan startup dengan mencatat error ke stderr dan set exitCode = 1.
+ *    d. Pasang signal handlers (`installSignalHandlers`) untuk menangkap sinyal OS SIGTERM dan SIGINT.
+ * 3. installSignalHandlers:
+ *    a. Cegah shutdown berulang dengan flag `shuttingDown`.
+ *    b. Eksekusi `application.shutdown()` secara aman (tutup server HTTPS, hentikan worker, tutup database SQLite).
+ *
  * Tanggung Jawab:
  * - Parsing argumen CLI `--config <absolute-path>` untuk memuat konfigurasi aplikasi.
  * - Menginisialisasi dan memulai DiagnosticApplication (migrasi SQLite, HTTPS server, single worker loop).
@@ -14,6 +26,11 @@ import { resolve } from "node:path";
 import { DiagnosticApplication } from "./application/application.js";
 import { loadApplicationConfig } from "./application/config-loader.js";
 
+/**
+ * Mengurai argumen baris perintah untuk mendapatkan path berkas konfigurasi.
+ * @param {string[]} argv - Daftar argumen CLI.
+ * @returns {string} Path absolut berkas konfigurasi.
+ */
 function configArgument(argv) {
   const index = argv.indexOf("--config");
   if (index === -1 || !argv[index + 1]) throw new TypeError("usage: node src/main.js --config <absolute-path>");

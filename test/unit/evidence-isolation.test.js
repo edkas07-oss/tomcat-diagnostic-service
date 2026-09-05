@@ -1,3 +1,18 @@
+/**
+ * @file test/unit/evidence-isolation.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian unit isolasi bukti, anti-traversal, anti-symlink, dan pembatasan jendela observasi telemetri.
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test "registry rejects unknown identity and non-normalized evidence paths":
+ *    - Verifikasi penolakan target di luar allowlist, path log relatif traversal, selector prometheus tidak aman, dan URL non-HTTPS.
+ * 2. Test "bounded reader rejects traversal and symlinks and enforces bounds":
+ *    - Verifikasi penolakan akses path keluar root (`../outside`), penolakan file symlink, dan pemotongan buffer `maxLines: 2`.
+ * 3. Test "evidence window isolates target, generation, and UTC time":
+ *    - Verifikasi fungsi `withinWindow()` hanya mengizinkan bukti dengan kesesuaian targetId, generation ID, dan jendela waktu yang presisi.
+ */
+
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

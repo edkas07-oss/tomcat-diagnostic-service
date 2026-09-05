@@ -3,6 +3,22 @@
  * @project Tomcat Diagnostic Service
  * @description Modul penyerapan dan normalisasi payload webhook notifikasi insiden dari Alertmanager v4.
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. normalizeWebhook(payload, options):
+ *    a. Validasi envelope webhook terhadap JSON Schema Alertmanager v4 (`validate()`).
+ *    b. Untuk setiap item alert dalam payload:
+ *       - Normalisasi timestamp startsAt dan endsAt ke standar RFC 3339 UTC.
+ *       - Periksa urutan waktu (endsAt tidak boleh mendahului startsAt pada status resolved).
+ *       - Validasi bahwa kombinasi label target terdaftar pada allowlist lokal (`allowedTargets`).
+ *       - Tentukan waktu kejadian `eventTime` (startsAt jika firing, endsAt jika resolved).
+ *       - Bentuk `eventKey` deterministik via hash SHA-256 (`${fingerprint}\0${status}\0${eventTime}`).
+ *       - Urutkan label dan anotasi secara kanonikal (`canonicalObject`).
+ *    c. Kembalikan objek request ter-normalisasi `{ groupKey, receiver, status, alerts, acceptedAt }`.
+ * 2. ingestAlertmanager(payload, options):
+ *    - Panggil `normalizeWebhook(payload, options)`.
+ *    - Teruskan request yang dinormalisasi ke `queue.accept(normalized)` untuk disimpan ke SQLite.
+ *
  * Prinsip & Batasan Arsitektur (TN-005):
  * - Validasi Skema & Allowlist: Memeriksa integritas envelope dan memastikan identitas target terdaftar pada allowlist lokal.
  * - Deterministic Event Key: Membentuk hash SHA-256 unik (`fingerprint + status + eventTime`) untuk deduplikasi event.

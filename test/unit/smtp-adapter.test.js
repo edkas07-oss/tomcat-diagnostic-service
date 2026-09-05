@@ -1,3 +1,15 @@
+/**
+ * @file test/unit/smtp-adapter.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian unit SmtpAdapter (pembuatan pesan email multipart/alternative tanpa akses jaringan).
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Buat streamTransport in-memory Nodemailer.
+ * 2. Inisialisasi SmtpAdapter dengan transport mock.
+ * 3. Kirim email via `adapter.send()` dan verifikasi struktur header/payload `multipart/alternative`.
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import nodemailer from "nodemailer";

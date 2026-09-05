@@ -3,6 +3,21 @@
  * @project Tomcat Diagnostic Service
  * @description Dynamic Rule Evaluator (Layer 2) dan Loader Declarative Rulepack.
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. isBuiltinBranch(branch):
+ *    - Periksa apakah nama branch termasuk dalam set bawaan `TD-01` s/d `TD-08`.
+ * 2. DynamicRuleEvaluator.registerRule(rule):
+ *    a. Kompilasi pola regex case-insensitive (`new RegExp(rule.pattern, "i")`).
+ *    b. Set default category 'general' jika belum didefinisikan.
+ *    c. Simpan atau perbarui aturan dalam array internal `this.rules`.
+ * 3. DynamicRuleEvaluator.evaluate(evidenceList):
+ *    a. Loop seluruh custom rules terdaftar:
+ *       - Cocokkan `rule.target_source` terhadap item bukti (misal `local_file` log excerpt atau spool).
+ *       - Eksekusi `rule.regex.test(text)`.
+ *       - Jika cocok (match): kembalikan keputusan diagnosis berdasarkan custom rule (branch, classification, confidence, assessment, recommendedActions).
+ *    b. Jika tidak ada custom rules yang cocok: lakukan fallback ke `evaluateTomcatDown(evidenceList)` (Layer 1 Built-in Engine).
+ *
  * Menggabungkan evaluasi aturan dinamis dengan mesin bawaan:
  * - Mengompilasi pola regex aturan deklaratif dalam memori secara hot-reload.
  * - Memprioritaskan pencocokan custom rules (TD-09+) terhadap bukti log/spool.

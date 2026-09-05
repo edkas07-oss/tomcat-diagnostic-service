@@ -1,3 +1,22 @@
+/**
+ * @file test/integration/sqlite-ingestion.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian integrasi persistensi SQLite ingestion (transaksi atomik, deduplikasi, batas antrean, rollback migrasi).
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test "commits before acceptance and suppresses duplicate work across reopen":
+ *    - Ingest event alert firing; verifikasi permission berkas 0600 dan duplicate = false.
+ *    - Tutup dan buka kembali repositori; ingest alert yang sama persis -> verifikasi duplicate = true dan tidak ada tugas baru di work_queue.
+ * 2. Test "rolls back the request when queue capacity is exhausted":
+ *    - Inisialisasi antrean dengan kapasitas = 1.
+ *    - Ingest event kedua -> verifikasi lemparan `QueueCapacityError` dan request kedua di-rollback secara atomik.
+ * 3. Test "correlates firing and resolved events to one incident":
+ *    - Ingest alert firing lalu alert resolved untuk fingerprint yang sama -> verifikasi terhubung ke satu incident record.
+ * 4. Test "rolls back a failed forward migration":
+ *    - Simulasi file migrasi dengan sintaks SQL rusak -> verifikasi rollback transaksi migrasi dan lemparan `MigrationError`.
+ */
+
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

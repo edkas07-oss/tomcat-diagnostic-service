@@ -1,3 +1,25 @@
+/**
+ * @file src/application/config-loader.js
+ * @project Tomcat Diagnostic Service
+ * @description Pemuat dan validator berkas konfigurasi runtime aplikasi (TM-ADR-0016).
+ *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. loadApplicationConfig(configPath, options):
+ *    a. Validasi path konfigurasi (harus path absolut yang dinormalisasi).
+ *    b. Baca konfigurasi mentah JSON dan skema JSON schema `application-config-v1.schema.json`.
+ *    c. Kompilasi dan validasi via Ajv2020 mode strict; lempar ConfigurationError jika gagal.
+ *    d. Validasi semua referensi berkas (databasePath, tls, bearerTokenFile, targets, smtp).
+ *    e. Muat daftar target allowlist dan instansiasi `TargetRegistry`.
+ *    f. Baca isi berkas rahasia mounted (TLS key/cert, Bearer token, SMTP credentials).
+ *    g. Kembalikan objek konfigurasi ter-freeze (`Object.freeze`) yang immutable.
+ *
+ * Prinsip & Batasan Arsitektur:
+ * - Immutable Configuration: Konfigurasi dibekukan saat startup untuk mencegah mutasi runtime.
+ * - Secret Mount Isolation: Membaca token dan sertifikat dari berkas mounted tanpa mencatatnya di log.
+ * - Path Normalization: Mengharuskan path absolut ter-normalisasi untuk mencegah path traversal.
+ */
+
 import { readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";

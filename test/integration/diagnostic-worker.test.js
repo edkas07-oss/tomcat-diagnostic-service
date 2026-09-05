@@ -1,3 +1,18 @@
+/**
+ * @file test/integration/diagnostic-worker.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian integrasi alur pemrosesan Single Diagnostic Worker Loop (persisted result, queue state, material update guard).
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Inisialisasi SqliteRepository, BoundedWorkQueue, dan ingest payload webhook Alertmanager.
+ * 2. Siapkan fungsi pengumpul bukti dummy yang mengembalikan state container `exited`.
+ * 3. Instansiasi DiagnosticWorker dan jalankan `worker.runOnce()`.
+ * 4. Verifikasi hasil diagnosis dievaluasi ke branch `TD-06`.
+ * 5. Verifikasi bahwa tabel `canonical_results` bertambah 1 dan status `work_queue` bertransisi menjadi `completed`.
+ * 6. Verifikasi fungsi `reserveMaterialUpdate` hanya mengembalikan true satu kali per insiden firing.
+ */
+
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

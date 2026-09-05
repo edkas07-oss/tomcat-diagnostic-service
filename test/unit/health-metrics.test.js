@@ -1,3 +1,16 @@
+/**
+ * @file test/unit/health-metrics.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian unit pelacak HealthMetrics dan serialisasi format Prometheus.
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test "health and metrics expose bounded operational state without target labels":
+ *    - Inkrementasi counter dan set gauge; verifikasi output serialisasi Prometheus tanpa membeberkan label internal instance target.
+ * 2. Test "Prometheus serialization rejects unsafe metric identities":
+ *    - Set metric name tidak valid (`invalid-name`) dan verifikasi serialisasi melempar error.
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { HealthMetrics, serializePrometheus } from "../../src/application/health-metrics.js";

@@ -9,9 +9,23 @@
 # Membangun versioned dan latest application image dari exact base digest.
 # Script tidak menarik image, menjalankan container, atau menghapus artifact.
 #
+# Pseudocode Alur Eksekusi:
+# ------------------------
+# 1. Inisialisasi path direktori skrip dan direktori root proyek (PROJECT_ROOT).
+# 2. Muat variabel konfigurasi statis dari berkas CONFIG.
+# 3. Baca nama proyek (PROJECT) dan nomor versi semantik (VERSION).
+# 4. Periksa ketersediaan base image immutable lokal pada runtime Podman.
+# 5. Validasi ID digest base image lokal agar presisi sama dengan BASE_IMAGE_ID.
+# 6. Eksekusi `podman build` dengan Containerfile, menyematkan tag versi dan :latest.
+#
 # Penggunaan
 # ----------
 # ./scripts/build.sh
+#
+# Batasan & Kontrak
+# -----------------
+# - Mengharuskan Podman lokal terpasang.
+# - Tidak melakukan penarikan remote image (network-free build contract).
 #
 ###############################################################################
 set -euo pipefail

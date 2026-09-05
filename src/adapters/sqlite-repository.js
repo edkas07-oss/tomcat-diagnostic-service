@@ -3,6 +3,33 @@
  * @project Tomcat Diagnostic Service
  * @description Adapter persistensi database SQLite menggunakan engine bawaan `node:sqlite`.
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. constructor(databasePath, { migrationsDirectory }):
+ *    a. Inisialisasi DatabaseSync, set izin file disk 0600, aktifkan PRAGMA foreign_keys = ON & WAL mode.
+ *    b. Jalankan migrasi forward-only terurut dari direktori migrasi (`migrate()`).
+ * 2. migrate(directory):
+ *    a. Buat tabel schema_migrations jika belum ada.
+ *    b. Baca berkas *.sql urut versi numerik; jalankan setiap migrasi yang belum terpasang dalam transaksi `BEGIN IMMEDIATE`.
+ *    c. Catat versi migrasi ke schema_migrations jika berhasil; lakukan `ROLLBACK` dan lempar `MigrationError` jika gagal.
+ * 3. accept(request, { queueCapacity }):
+ *    a. Buka transaksi atomik SQLite.
+ *    b. Catat entri baru ke tabel `requests`.
+ *    c. Untuk setiap alert:
+ *       - Lakukan upsert ke tabel `incidents` (state firing/resolved, timestamp).
+ *       - Periksa apakah `event_key` telah ada di tabel `events` (deduplikasi).
+ *       - Jika duplikat -> lewati antrean kerja baru.
+ *       - Jika baru: simpan ke tabel `events`, periksa kapasitas antrean `work_queue` (< queueCapacity); jika penuh lempar QueueCapacityError.
+ *       - Masukkan entri tugas baru berstatus `queued` ke tabel `work_queue`.
+ *    d. Commit transaksi dan kembalikan `{ accepted, duplicate }`.
+ * 4. Metoda Manajemen Antrean, Hasil Kanonikal, Pengiriman Notifikasi, dan Custom Rules:
+ *    - `claimWorkItem()`: Klaim item tertua secara atomik (`state = 'processing'`).
+ *    - `completeWorkItem()`: Tandai antrean `completed` atau `failed`.
+ *    - `saveCanonicalResult()`: Simpan hasil diagnosis kanonikal dan ringkasan bukti telemetri.
+ *    - `reserveMaterialUpdateSlot()`: Guard pembaruan materiil insiden (maks 1 kali pembaruan firing).
+ *    - `recordNotificationAttempt()`: Simpan riwayat percobaan pengiriman SMTP (attempt 1..3).
+ *    - `saveCustomRule()` / `getAllCustomRules()`: Simpan dan baca aturan deklaratif dengan proteksi anti-collision.
+ *
  * Prinsip & Batasan Arsitektur:
  * - Isolated Single Writer (TM-ADR-0013, TM-ADR-0015): Mengisolasi seluruh akses SQLite dalam satu adapter.
  * - File permission ketat `0600` pada disk fisik, WAL journal mode, dan PRAGMA foreign_keys = ON.

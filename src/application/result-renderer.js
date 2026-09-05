@@ -3,6 +3,22 @@
  * @project Tomcat Diagnostic Service
  * @description Renderer laporan diagnosis insiden format 7-seksi Enterprise SRE (HTML responsif & Plain Text).
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. renderText(result, evidenceList):
+ *    - Format 7 Seksi Enterprise SRE teks polos:
+ *      1) RINGKASAN INSIDEN (Rule, Target, Status, Waktu Observasi)
+ *      2) STATUS DAN TINGKAT KEYAKINAN (Klasifikasi, Confidence, Branch)
+ *      3) ASESMEN DIAGNOSIS (Hasil evaluasi terperinci)
+ *      4) BUKTI TELEMETRI RUNTIME (Prometheus & Spool Status)
+ *      5) EKSTRAK LOG DAN ARTIFAK (Catalina.out excerpt)
+ *      6) BUKTI YANG TIDAK TERSEDIA ATAU BERTENTANGAN (Missing/Contradictory evidence)
+ *      7) REKOMENDASI TINDAKAN OPERATOR (Action items mitigasi)
+ * 2. renderHtml(result, evidenceList):
+ *    - Format laporan HTML responsif dengan struktur 7 seksi yang sama, menerapkan warna status (merah untuk firing, hijau untuk resolved), layout kartu rapi, dan escaping seluruh nilai teks dinamis via `escapeHtml()`.
+ * 3. renderResult(result, evidenceList):
+ *    - Kembalikan objek `{ text, html }` untuk diteruskan ke adapter SMTP.
+ *
  * Prinsip & Batasan Arsitektur (TN-007):
  * - 7-Section SRE Standard: Menghasilkan laporan dengan struktur seksi terstandarisasi untuk notifikasi insiden.
  * - HTML Safety: Melakukan sanitasi/escaping karakter khusus HTML (`&`, `<`, `>`, `"`) untuk mencegah injection.

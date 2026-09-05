@@ -1,3 +1,22 @@
+/**
+ * @file test/integration/notification-lifecycle.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian integrasi batas siklus hidup notifikasi email (Initial Firing, Material Update Guard, Resolved Notification).
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test "worker sends initial, one material update, and resolved notification":
+ *    a. Kirim initial alert firing -> verifikasi email notifikasi 1 terkirim (firing).
+ *    b. Kirim alert firing tanpa perubahan materiil -> tidak ada email baru yang terkirim.
+ *    c. Kirim alert firing dengan perubahan materiil (evidence berubah) -> email notifikasi 2 terkirim (material update).
+ *    d. Kirim alert firing materiil berikutnya -> diblokir karena batas `material_update_count` = 1.
+ *    e. Kirim alert resolved -> email notifikasi 3 terkirim (resolved).
+ *    f. Kirim duplicate alert resolved -> diblokir karena batas `resolved_notification_count` = 1.
+ * 2. Test "resolved without stored firing is explicit and still notifies":
+ *    - Terima resolved alert tanpa ada histori firing sebelumnya.
+ *    - Verifikasi status `resolved_without_previous_firing`, klasifikasi `undetermined`, dan 1 email notifikasi terkirim.
+ */
+
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

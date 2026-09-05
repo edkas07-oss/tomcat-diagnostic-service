@@ -1,3 +1,18 @@
+/**
+ * @file test/unit/normalize-webhook.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian unit normalisasi payload webhook Alertmanager v4 (eventKey deterministik, allowlist target, skema schema).
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test "normalizes a valid TomcatDown firing event deterministically":
+ *    - Jalankan `normalizeWebhook()` dua kali pada payload yang sama -> verifikasi `eventKey` SHA-256 identik dan `eventTime` UTC format RFC 3339.
+ * 2. Test "rejects an identity outside the local allowlist":
+ *    - Kirim alert dengan host yang tidak ada pada allowlist -> verifikasi lemparan `IngestionValidationError`.
+ * 3. Test "rejects unsupported alert schema":
+ *    - Kirim payload dengan version bukan 4 -> verifikasi lemparan `IngestionValidationError`.
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { resolve } from "node:path";

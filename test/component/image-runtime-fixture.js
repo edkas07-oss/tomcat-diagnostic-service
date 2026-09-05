@@ -1,3 +1,16 @@
+/**
+ * @file test/component/image-runtime-fixture.js
+ * @project Tomcat Diagnostic Service
+ * @description Generator fixture konfigurasi non-secret untuk pengujian container image runtime.
+ *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. Ambil path direktori runtime dari argumen baris perintah.
+ * 2. Tulis berkas bearer-token dengan izin 0600.
+ * 3. Tulis berkas targets.json allowlist untuk target component.
+ * 4. Tulis berkas application.json lengkap dengan skema listen 8443, path database, TLS, dan SMTP.
+ */
+
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 

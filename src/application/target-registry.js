@@ -3,6 +3,20 @@
  * @project Tomcat Diagnostic Service
  * @description Registri target terisolasi untuk memetakan identitas target ke path bukti dan endpoint telemetri.
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. canonicalTargetId(identity):
+ *    - Gabungkan properti identitas menjadi format standar: `${environment}/${host}/${tomcat_instance}`.
+ * 2. TargetRegistry.constructor(targets):
+ *    a. Loop setiap definisi target dalam array:
+ *       - Bentuk `id = canonicalTargetId(target.identity)`. Tolak jika duplikat.
+ *       - Validasi bahwa logDirectory, crashDirectory, dan collectorSpool merupakan path absolut ter-normalisasi.
+ *       - Validasi pola label exact-match pada `prometheusSelector`.
+ *       - Validasi protokol HTTPS pada `applicationHealthUrl`.
+ *       - Simpan target ke dalam map `this.targets` sebagai objek beku (`Object.freeze`).
+ * 3. require(identity):
+ *    - Ambil target berdasarkan ID; lempar RangeError jika tidak terdaftar pada allowlist.
+ *
  * Prinsip & Batasan Arsitektur (TN-006):
  * - Target Allowlist: Membentuk canonical target ID (`environment/host/tomcat_instance`) dan menolak target tak terdaftar.
  * - Path Safety: Mewajibkan absolute normalized path tanpa traversal (`..`) atau symlink untuk direktori log dan spool.

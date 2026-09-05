@@ -1,3 +1,18 @@
+/**
+ * @file test/unit/tomcat-down-engine.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian unit Decision Engine Layer 1 (evaluasi deterministik seluruh cabang TD-01 s/d TD-08 dan fallback kontradiksi).
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test "evaluates every TomcatDown decision-table branch":
+ *    - Evaluasi setiap kombinasi bukti deterministik untuk cabang TD-01 hingga TD-08.
+ * 2. Test "uses contract confidence rather than a numeric score":
+ *    - Verifikasi confidence menggunakan level kualitatif kontrak (`high`), bukan skor numerik.
+ * 3. Test "contradicting direct state falls back to TD-08":
+ *    - Verifikasi kombinasi status yang saling bertentangan (`running` dan `exited`) langsung fallback ke TD-08 undetermined.
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createEvidence } from "../../src/domain/evidence.js";

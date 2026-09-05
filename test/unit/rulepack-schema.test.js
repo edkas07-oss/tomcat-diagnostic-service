@@ -1,3 +1,23 @@
+/**
+ * @file test/unit/rulepack-schema.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian unit kompilasi dan validasi skema Rulepack v1 serta proteksi ReDoS regex.
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test "isSafeRegex detects unsafe and safe regex patterns":
+ *    - Verifikasi pola literal dan regex ter-escape aman -> return true.
+ *    - Verifikasi pola nested quantifier `(a+)+` dan sintaks rusak -> return false.
+ * 2. Test "createRulepackValidator accepts valid rulepack payload with category":
+ *    - Validasi payload lengkap dengan category `database_persistence` -> return valid: true.
+ * 3. Test "createRulepackValidator rejects invalid category enum":
+ *    - Validasi category di luar enum schema -> return valid: false.
+ * 4. Test "createRulepackValidator rejects invalid schema or inconsistent confidence":
+ *    - Validasi field wajib hilang atau pemetaan confidence `confirmed_cause` dengan `low` -> return valid: false.
+ * 5. Test "createRulepackValidator rejects unsafe regex pattern in rule payload":
+ *    - Validasi rule dengan pattern `(x+)+` -> return valid: false, error: unsafe_regex_pattern.
+ */
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import { dirname, join } from "node:path";

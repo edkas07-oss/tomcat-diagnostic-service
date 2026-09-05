@@ -4,6 +4,12 @@
 -- Origin    : TN-018 (Implement Strict Declarative Rulepack Engine)
 -- Purpose   : Persistensi aturan deklaratif dinamis (custom rules) hasil sintesis
 --             AI atau input SRE, dengan proteksi branch unik (anti-collision).
+--
+-- Pseudocode Skema & Relasi Database:
+-- -----------------------------------
+-- 1. custom_rules: Menyimpan payload aturan dinamis (rule_id, branch unik, name,
+--    target_source, pattern regex aman, assessment, classification, confidence, rule_json).
+-- 2. Indeks unik pada kolom branch untuk menjamin tidak ada tumpang tindih nama branch.
 -- ==============================================================================
 
 CREATE TABLE custom_rules (

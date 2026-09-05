@@ -1,3 +1,19 @@
+/**
+ * @file test/unit/canonical-result.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian unit model Canonical Result v1, stabilitas hash deterministik, renderer 7-seksi, dan validasi confidence.
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test "canonical hash excludes volatile timing and material change is bounded":
+ *    - Buat 2 instance result dengan timing berbeda -> verifikasi resultHash identik dan isMaterialChange = false.
+ *    - Ubah processingStatus -> verifikasi isMaterialChange = true.
+ * 2. Test "renderer preserves seven-section order and escapes HTML":
+ *    - Render result ke HTML & Text; verifikasi 7 seksi terbentuk dan karakter injection `<script>` di-escape menjadi `&lt;script&gt;`.
+ * 3. Test "canonical result rejects invalid confidence":
+ *    - Verifikasi lemparan TypeError pada kombinasi invalid classification `confirmed_cause` dengan confidence `medium`.
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildCanonicalResult, isMaterialChange } from "../../src/domain/canonical-result.js";

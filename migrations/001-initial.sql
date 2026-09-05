@@ -4,6 +4,15 @@
 -- Origin    : TN-005 (Implement Durable Diagnostic Ingestion and Queue)
 -- Purpose   : Skema dasar persistensi webhook Alertmanager, insiden, event,
 --             dan antrean kerja berbatas (bounded FIFO work queue).
+--
+-- Pseudocode Skema & Relasi Database:
+-- -----------------------------------
+-- 1. Inisialisasi tabel schema_migrations untuk mencatat riwayat migrasi.
+-- 2. requests: Catat payload request masuk (group_key, receiver, status firing/resolved).
+-- 3. incidents: Entity insiden unik per fingerprint (environment, host, tomcat_instance, state).
+-- 4. events: Pencatatan event alert atomik dengan UNIQUE event_key untuk deduplikasi mutlak.
+-- 5. work_queue: Antrean kerja FIFO berstatus queued -> processing -> completed/failed,
+--    terikat secara 1:1 dengan event_id.
 -- ==============================================================================
 
 CREATE TABLE IF NOT EXISTS schema_migrations (

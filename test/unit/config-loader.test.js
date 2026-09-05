@@ -1,3 +1,19 @@
+/**
+ * @file test/unit/config-loader.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian unit pemuat konfigurasi aplikasi dan isolasi rahasia file mounted.
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test "loads versioned non-secret configuration and mounted files":
+ *    - Buat berkas-berkas mounted fixture (server.crt, bearer-token, targets.json, application.json).
+ *    - Muat konfigurasi via `loadApplicationConfig()`.
+ *    - Verifikasi schemaVersion = 1, bearerToken ter-trim rapi, dan targetRegistry terinisialisasi.
+ * 2. Test "rejects invalid configuration without exposing mounted secret":
+ *    - Buat konfigurasi dengan nilai tidak valid (`requestLimitBytes: 1`).
+ *    - Verifikasi lemparan `ConfigurationError` tanpa membeberkan isi rahasia `do-not-print-this` pada pesan error.
+ */
+
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

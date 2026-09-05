@@ -4,6 +4,14 @@
 -- Origin    : TN-007 (Implement Worker Canonical Result and Renderers)
 -- Purpose   : Persistensi hasil evaluasi diagnosis kanonikal (canonical results),
 --             ringkasan bukti (evidence summaries), dan batas pembaruan materiil.
+--
+-- Pseudocode Skema & Relasi Database:
+-- -----------------------------------
+-- 1. Tambahkan kolom material_update_count pada tabel incidents untuk membatasi notifikasi berkala.
+-- 2. canonical_results: Menyimpan output diagnosis deterministik (diagnostic_id UUID v4,
+--    classification, confidence, result_hash SHA-256 tanpa waktu volatil, result_json).
+-- 3. evidence_summaries: Menyimpan ringkasan item bukti telemetri yang mendasari evaluasi rule.
+-- 4. Indeks result_hash untuk optimasi pengecekan perubahan materiil diagnosis.
 -- ==============================================================================
 
 ALTER TABLE incidents ADD COLUMN material_update_count INTEGER NOT NULL DEFAULT 0;

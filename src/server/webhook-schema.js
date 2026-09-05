@@ -3,6 +3,13 @@
  * @project Tomcat Diagnostic Service
  * @description Kompilasi skema validasi webhook Alertmanager v4 menggunakan Ajv (Draft-07).
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. Muat berkas JSON schema Alertmanager webhook v4 dari path yang diberikan.
+ * 2. Inisialisasi instance compiler Ajv dengan mode strict (`strict: true`, `allErrors: true`).
+ * 3. Daftarkan custom format "date-time" dengan validasi regex RFC 3339 dan parser `Date.parse()`.
+ * 4. Kompilasi schema menjadi fungsi validator yang reusable dan kembalikan fungsi tersebut.
+ *
  * Batasan Teknis (TM-ADR-0013, TN-005):
  * - Menggunakan validator exact-pinned `ajv@8.20.0` dalam mode strict.
  * - Memvalidasi format payload alert webhook: alerts envelope, status, labels, annotations, startsAt RFC3339.

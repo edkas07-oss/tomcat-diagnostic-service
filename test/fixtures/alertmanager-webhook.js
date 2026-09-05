@@ -1,3 +1,15 @@
+/**
+ * @file test/fixtures/alertmanager-webhook.js
+ * @project Tomcat Diagnostic Service
+ * @description Fixture generator untuk payload webhook Alertmanager v4 pada lingkungan pengujian.
+ *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. Bentuk objek alert default dengan label standar (alertname: TomcatDown, env: lab, host: tomcat-01, default instance).
+ * 2. Terapkan custom overrides pada alert jika disediakan.
+ * 3. Kembalikan envelope webhook v4 `{ version: '4', groupKey, status, receiver, alerts }`.
+ */
+
 export function webhook(overrides = {}) {
   const alert = {
     status: "firing",

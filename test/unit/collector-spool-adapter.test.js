@@ -1,3 +1,18 @@
+/**
+ * @file test/unit/collector-spool-adapter.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian unit adapter pembaca spool bukti container collector.
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test "collector spool accepts only bounded records for the target window":
+ *    - Buat berkas spool valid, berkas beda target, berkas invalid json, dan berkas di luar rentang window waktu.
+ *    - Jalankan `readCollectorSpool()` dan verifikasi hanya 1 rekaman yang lolos isolasi target dan jendela waktu.
+ * 2. Test "createDefaultEvidenceCollector reads spool evidence from target":
+ *    - Inisialisasi TargetRegistry dengan path direktori spool dan jalankan collector evidence default.
+ *    - Verifikasi bukti `container_state: exited` berhasil dibaca dan dinormalisasi.
+ */
+
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

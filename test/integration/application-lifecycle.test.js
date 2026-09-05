@@ -1,3 +1,19 @@
+/**
+ * @file test/integration/application-lifecycle.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian integrasi siklus hidup aplikasi (startup, kegagalan bind, graceful shutdown, penutupan database).
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test "startup failure keeps readiness false and closes the migrated database":
+ *    - Simulasi kegagalan bind port pada server HTTPS.
+ *    - Verifikasi readiness tetap false dan koneksi database SQLite ditutup otomatis.
+ * 2. Test "one worker loop stops before database close during graceful shutdown":
+ *    - Jalankan aplikasi penuh dan verifikasi readiness = true.
+ *    - Eksekusi `application.shutdown()`.
+ *    - Verifikasi urutan graceful shutdown: worker dihentikan -> penerimaan trafik ditutup -> database SQLite ditutup.
+ */
+
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { test } from "node:test";

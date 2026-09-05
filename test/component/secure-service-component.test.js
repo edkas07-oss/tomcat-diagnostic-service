@@ -1,3 +1,23 @@
+/**
+ * @file test/component/secure-service-component.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian komponen soket TLS riil, endpoint aman, dan pengiriman notifikasi SMTP listener.
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. fakeSmtpServer():
+ *    - Buat server TCP mock SMTP untuk menangkap handshake EHLO, MAIL FROM, RCPT TO, dan payload DATA.
+ * 2. Test "actual TLS socket enforces CA and exposes bounded endpoints":
+ *    - Buat server HTTPS dengan cert dan key TLS riil.
+ *    - Verifikasi GET /health/live (200), GET /metrics (200), POST tanpa auth (401), dan penolakan CA tidak dikenal.
+ * 3. Test "SMTP adapter delivers multipart message to an ephemeral listener":
+ *    - Kirim pesan melalui SmtpAdapter ke fakeSmtpServer dan verifikasi payload multipart/alternative diterima.
+ * 4. Test "worker persists and delivers a rendered result through an actual SMTP socket":
+ *    - Ingest alert TomcatDown firing ke BoundedWorkQueue dan SQLite.
+ *    - Jalankan worker runOnce, kumpulkan bukti, evaluasi keputusan (TD-06), render 7-seksi SRE, dan kirim via SMTP.
+ *    - Verifikasi penerimaan pesan pada fake SMTP server dan status 'sent' pada notification_attempts.
+ */
+
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { request as httpsRequest } from "node:https";

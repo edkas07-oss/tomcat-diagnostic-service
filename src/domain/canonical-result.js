@@ -3,6 +3,20 @@
  * @project Tomcat Diagnostic Service
  * @description Domain model pembentukan Canonical Result v1 dan deteksi perubahan material insiden.
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. buildCanonicalResult(input):
+ *    a. Validasi enum processingStatus (completed, partially_completed, failed, dll).
+ *    b. Validasi konsistensi pasangan classification dan confidence.
+ *    c. Urutkan daftar evidence berdasarkan evidenceId secara stabil.
+ *    d. Filter daftar unavailableSources (sumber bukti dengan status bukan 'collected').
+ *    e. Susun objek kanonikal `core` dengan pengurutan kunci/objek deterministik via `stable()`.
+ *    f. Hitung SHA-256 hash dari JSON representasi `core` -> `resultHash` (tanpa field timing yang volatil).
+ *    g. Kembalikan objek utuh `{ ...core, timing, resultHash }`.
+ * 2. isMaterialChange(previous, current):
+ *    - Periksa apakah terdapat perubahan pada processingStatus, classification, confidence, teks asesmen, atau unavailableSources.
+ *    - Kembalikan true jika ada perubahan materiil, false jika perubahan hanya bersifat volatil.
+ *
  * Prinsip & Batasan Arsitektur (TN-007):
  * - Canonical Schema v1: Membentuk objek hasil diagnosis terstandardisasi dengan stabilitas urutan key/array.
  * - Deterministic Result Hash: Menghitung SHA-256 hash inti hasil evaluasi tanpa melibatkan timestamp volatil.

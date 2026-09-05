@@ -1,3 +1,25 @@
+/**
+ * @file src/application/health-metrics.js
+ * @project Tomcat Diagnostic Service
+ * @description Modul pelacak status kesehatan (liveness, readiness) dan eksporter metrik Prometheus.
+ *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. HealthMetrics:
+ *    a. Inisialisasi status live = true, ready = false, serta map counters dan gauges.
+ *    b. `increment(name, labels)`: Tambah nilai counter untuk kombinasi nama dan label tertentu.
+ *    c. `setGauge(name, value)`: Set nilai gauge saat ini.
+ *    d. `health()`: Kembalikan objek `{ live, ready }`.
+ *    e. `snapshot()`: Salin seluruh nilai counters dan gauges menjadi plain object.
+ * 2. serializePrometheus(metrics):
+ *    a. Ambil snapshot metrik.
+ *    b. Untuk setiap counter dan gauge:
+ *       - Validasi nama metrik sesuai format baku Prometheus (`validName`).
+ *       - Urutkan label secara leksikografis dan lakukan sanitasi/escaping (`escapeLabel`).
+ *       - Susun baris metrik: `${name}{${labels}} ${value}`.
+ *    c. Kembalikan representasi string berformat `text/plain; version=0.0.4`.
+ */
+
 export class HealthMetrics {
   constructor() { this.live = true; this.ready = false; this.counters = new Map(); this.gauges = new Map(); }
   setReady(value) { this.ready = Boolean(value); }

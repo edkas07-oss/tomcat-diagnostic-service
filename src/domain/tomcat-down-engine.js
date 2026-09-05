@@ -3,6 +3,21 @@
  * @project Tomcat Diagnostic Service
  * @description Decision Engine Deterministik Layer 1 untuk insiden TomcatDown (Built-in Branches TD-01..TD-08).
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. Ekstrak sinyal observasi langsung dari bukti telemetri:
+ *    - jmxFails, healthUp, healthFails, running, exited.
+ * 2. Evaluasi aturan pohon keputusan (Evaluated in strict deterministic order):
+ *    a. Kontradiksi langsung (running & exited, atau healthUp & healthFails) -> Branch TD-08 (undetermined).
+ *    b. jmxFails + healthFails + runtime_oom (oomKilled = true) -> Branch TD-02 (confirmed_cause, high confidence).
+ *    c. jvm_fatal_marker + crash_artifact + runtime_death_event -> Branch TD-03 (confirmed_cause, high confidence).
+ *    d. tomcat_startup + connector_bind_exception tanpa complete -> Branch TD-04 (confirmed_cause, high confidence).
+ *    e. orderly_shutdown + explicit_stop_event -> Branch TD-05 (confirmed_cause, high confidence).
+ *    f. jmxFails + healthUp + running -> Branch TD-01 (probable_cause, medium confidence).
+ *    g. exited tanpa bukti spesifik -> Branch TD-06 (undetermined).
+ *    h. running + jmxFails + health timeout + long_pause -> Branch TD-07 (possible_cause, medium confidence).
+ *    i. Fallback default jika tidak ada cabang yang terpenuhi -> Branch TD-08 (undetermined).
+ *
  * Pohon Keputusan Built-in:
  * - TD-01: TLS scrape unavailable
  * - TD-02: Container terminated by OOM mechanism

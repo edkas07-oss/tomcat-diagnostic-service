@@ -11,6 +11,19 @@
 # script membuat fixture non-secret, container exact, dan selalu menghapus
 # container tersebut. Directory tetap dimiliki caller untuk evidence/cleanup.
 #
+# Pseudocode Alur Eksekusi:
+# ------------------------
+# 1. Validasi argumen direktori komponen (harus path absolut dan direktori ada).
+# 2. Muat konfigurasi statis CONFIG dan nomor versi VERSION.
+# 3. Definisikan fungsi cleanup_container dengan trap EXIT untuk menjamin pembersihan resource.
+# 4. Generate konfigurasi fixture runtime via `test/component/image-runtime-fixture.js`.
+# 5. Jalankan container aplikasi secara background (detached) dengan volume runtime dan port mapping.
+# 6. Dapatkan port HTTPS dinamis pada host.
+# 7. Jalankan probe pengujian HTTPS via `test/component/image-runtime-probe.js`.
+# 8. Hentikan container dengan graceful shutdown (SIGTERM via `podman stop --time 5`).
+# 9. Verifikasi exit code container adalah 0 (shutdown bersih).
+# 10. Jalankan probe verifikasi database SQLite via `test/component/image-runtime-database-probe.js`.
+#
 # Penggunaan
 # ----------
 # ./scripts/test-image-component.sh /tmp/tomcat-diagnostic-tn010-component

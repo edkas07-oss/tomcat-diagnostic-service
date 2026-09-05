@@ -9,6 +9,22 @@
 # Memverifikasi metadata dan runtime-static contract image yang telah dibangun.
 # Setiap probe memakai disposable `podman run --rm` tanpa port atau volume.
 #
+# Pseudocode Alur Eksekusi:
+# ------------------------
+# 1. Inisialisasi variabel environment dan muat konfigurasi CONFIG & VERSION.
+# 2. Periksa metadata image melalui `podman image inspect`:
+#    - User adalah 'node' (non-root)
+#    - Working directory adalah '/app'
+#    - Label versi, base name, dan base image ID sesuai standar immutable
+#    - Command startup adalah node src/main.js --config ...
+# 3. Jalankan container sementara (`podman run --rm`):
+#    - Verifikasi versi Node.js sama persis dengan NODE_VERSION
+#    - Verifikasi dependensi produksi npm tanpa devDependencies
+# 4. Validasi integritas berkas di dalam container image:
+#    - Pastikan berkas esensial (src/main.js, schemas, migrations) tersedia
+#    - Pastikan direktori pengujian (test), CONFIG, dan README tidak tersalin
+#    - Pastikan tidak ada berkas sensitif (*.key, *.crt, *.pem, *.sqlite*)
+#
 # Penggunaan
 # ----------
 # ./scripts/test-image.sh

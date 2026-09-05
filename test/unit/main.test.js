@@ -1,3 +1,16 @@
+/**
+ * @file test/unit/main.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian unit signal handler proses OS (SIGTERM/SIGINT) dan idempotensi graceful shutdown.
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Pasang signal handler ke objek runtime mock via `installSignalHandlers()`.
+ * 2. Pancarkan sinyal SIGTERM dan SIGINT secara bersamaan.
+ * 3. Verifikasi fungsi `application.shutdown()` hanya dipanggil tepat satu kali (idempoten).
+ * 4. Verifikasi exitCode tetap 0 (shutdown bersih).
+ */
+
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { test } from "node:test";

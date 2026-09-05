@@ -3,6 +3,17 @@
  * @project Tomcat Diagnostic Service
  * @description Adapter pembaca bukti file lokal (log catalina, thread dump) dengan sensor redaksi data sensitif.
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. Ambil root directory target berdasarkan `target[rootField]`.
+ *    - Jika tidak dikonfigurasi, kembalikan Evidence berstatus `not_configured`.
+ * 2. Coba baca file menggunakan `readBoundedFile(root, relativePath)`:
+ *    a. Lakukan sensor redaksi nilai sensitif (token, password, key, cookie) menggunakan pola regex `sensitive` -> `<redacted>`.
+ *    b. Bentuk dan kembalikan Evidence berstatus `collected` dengan nilai `{ excerpt: sanitized, truncated }` serta flag `redacted`.
+ * 3. Jika terjadi error:
+ *    - Tangkap ENOENT -> kembalikan Evidence berstatus `not_found`.
+ *    - Tangkap error lainnya -> kembalikan Evidence berstatus `unavailable`.
+ *
  * Prinsip & Batasan Arsitektur (TN-006):
  * - Target Isolation: Membaca path file log target via bounded file reader terisolasi.
  * - Secret Redaction: Meredaksi otomatis token, password, authorization, dan API keys.

@@ -3,6 +3,18 @@
  * @project Tomcat Diagnostic Service
  * @description Domain model pembentukan bukti telemetri kanonikal terisolasi untuk analisis insiden.
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. createEvidence(input):
+ *    a. Validasi enum status bukti (`EVIDENCE_STATUSES`) dan kekuatan bukti (`EVIDENCE_STRENGTHS`).
+ *    b. Normalisasi waktu observedAt dan collectedAt ke format standar ISO 8601 UTC.
+ *    c. Susun objek kanonikal `core` (source, type, targetId, generation, status, strength, value, redacted) secara stabil.
+ *    d. Hitung SHA-256 hash dari representasi JSON `core` sebagai `evidenceId`.
+ *    e. Kembalikan objek `{ evidenceId, ...core, collectedAt }`.
+ * 2. withinWindow(evidence, window):
+ *    - Validasi kesesuaian targetId, kecocokan generation ID (jika ada), dan rentang waktu `observedAt` berada di antara `from` dan `to`.
+ *    - Kembalikan true jika lolos seluruh filter isolasi, false jika tidak.
+ *
  * Prinsip & Batasan Arsitektur (TN-006):
  * - Canonical Evidence Model: Menstandarkan tipe, status, strength, dan payload bukti dalam bentuk objek kanonikal.
  * - Deterministic Evidence ID: Menghasilkan SHA-256 evidence ID unik berdasarkan data kanonikal.

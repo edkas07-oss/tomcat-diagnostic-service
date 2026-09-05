@@ -3,6 +3,31 @@
  * @project Tomcat Diagnostic Service
  * @description Komposer siklus hidup aplikasi (Application Lifecycle Composer).
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. createDefaultEvidenceCollector(targetRegistry):
+ *    a. Cari target pada targetRegistry; jika tidak ada return `[]`.
+ *    b. Hitung jendela observasi insiden `observedAt ± 5 menit`.
+ *    c. Kumpulkan bukti dari collector spool (container status, process, port probe).
+ *    d. Kumpulkan bukti dari file lokal (catalina log excerpt dengan redaksi secret).
+ *    e. Kumpulkan bukti status HTTP /health aplikasi web.
+ *    f. Kembalikan array seluruh item bukti yang berhasil dikumpulkan.
+ * 2. DiagnosticApplication.constructor(config):
+ *    a. Inisialisasi SqliteRepository dan jalankan skema migrasi database.
+ *    b. Inisialisasi BoundedWorkQueue, SmtpAdapter, NotificationDelivery, DynamicRuleEvaluator, dan HealthMetrics.
+ *    c. Muat custom rules dari database SQLite ke dalam DynamicRuleEvaluator.
+ *    d. Inisialisasi DiagnosticWorker dengan concurrency = 1 (single worker).
+ *    e. Konfigurasi HTTPS server internal beserta validator webhook dan rulepack.
+ * 3. DiagnosticApplication.start():
+ *    a. Mulai listen server HTTPS pada port 8443.
+ *    b. Mulai background loop worker via `worker.start()`.
+ *    c. Set status readiness menjadi true pada HealthMetrics.
+ * 4. DiagnosticApplication.shutdown():
+ *    a. Tolak request baru (accepting = false) dan set readiness = false.
+ *    b. Hentikan worker loop secara elegan via `worker.stop()`.
+ *    c. Tutup HTTPS server.
+ *    d. Tutup koneksi database SQLite via `repository.close()`.
+ *
  * Mengoordinasikan seluruh sub-sistem Diagnostic Service:
  * - Inisialisasi dan migrasi forward-only SQLite repository (isolated single writer).
  * - Bounded work queue (kapasitas 50) dan single diagnostic worker loop.

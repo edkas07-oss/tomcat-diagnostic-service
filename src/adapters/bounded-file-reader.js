@@ -3,6 +3,22 @@
  * @project Tomcat Diagnostic Service
  * @description Pembaca file sistem lokal dengan batas ukuran, jumlah baris, dan proteksi path traversal ketat.
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. inside(root, candidate):
+ *    - Periksa apakah candidate berada di bawah direktori root menggunakan perbandingan relative path (tanpa awalan `..`).
+ * 2. readBoundedFile(rootDirectory, relativePath, options):
+ *    a. Tolak jika relativePath berformat path absolut.
+ *    b. Resolusikan realpath direktori root.
+ *    c. Gabungkan path dan periksa apakah path keluar dari root (`inside`).
+ *    d. Periksa `lstatSync()`; tolak jika merupakan symbolic link.
+ *    e. Resolusikan `realpathSync()` berkas aktual dan pastikan tetap di dalam root.
+ *    f. Buka file descriptor secara read-only.
+ *    g. Alokasikan buffer berukuran `maxBytes + 1` dan baca byte file.
+ *    h. Potong teks utf-8 pada batas `maxBytes` dan batasi jumlah baris maksimal `maxLines`.
+ *    i. Kembalikan objek `{ text, bytesRead, linesRead, truncated }`.
+ *    j. Tutup file descriptor di blok finally.
+ *
  * Prinsip & Batasan Arsitektur (TN-006):
  * - Anti-Traversal: Menolak path relatif yang keluar dari direktori root terkonfigurasi.
  * - Anti-Symlink: Menolak symbolic link guna mencegah eksfiltrasi file host di luar direktori aman.

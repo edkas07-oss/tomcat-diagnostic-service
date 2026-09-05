@@ -3,6 +3,24 @@
  * @project Tomcat Diagnostic Service
  * @description Kompilasi dan validasi Declarative Rulepack v1 menggunakan Ajv (Draft-07).
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. isSafeRegex(pattern):
+ *    a. Periksa tipe data string, panjang > 0, dan panjang <= 1024 karakter.
+ *    b. Periksa pola berbahaya yang berpotensi ReDoS (nested quantifiers).
+ *    c. Uji kompilasi `new RegExp(pattern)`; kembalikan true jika valid, false jika error.
+ * 2. validateClassificationConfidence(classification, confidence):
+ *    a. Cocokkan kombinasi classification dan confidence dengan tabel pemetaan confidenceMap.
+ *    b. Kembalikan true jika pasangan nilai valid sesuai matriks kontrak, false jika tidak.
+ * 3. createRulepackValidator(schemaPath):
+ *    a. Muat berkas JSON schema `rulepack-v1.schema.json`.
+ *    b. Kompilasi validator Ajv dalam mode strict (`allErrors: true`, `strict: true`).
+ *    c. Kembalikan fungsi validator (data):
+ *       - Validasi struktur schema via Ajv; jika gagal return error `invalid_rule_schema`.
+ *       - Validasi konsistensi classification-confidence; jika gagal return `invalid_confidence_mapping`.
+ *       - Validasi pola regex via `isSafeRegex()`; jika gagal return `unsafe_regex_pattern`.
+ *       - Kembalikan `{ valid: true }` jika seluruh guard lolos.
+ *
  * Komponen 5-Layer Ingestion Guard (TN-018):
  * - Layer 2 (Schema Guard): Validasi properti wajib, tipe data, enum klasifikasi, confidence, dan category via Ajv.
  * - Layer 5 (Safety Guard): Evaluasi keamanan ekspresi reguler (ReDoS protection) melalui `isSafeRegex`.

@@ -1,3 +1,19 @@
+/**
+ * @file test/component/application-startup-component.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian level komponen startup aplikasi lengkap (HTTPS, SQLite migrasi, Readiness, Shutdown).
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Tulis berkas fixture konfigurasi (bearer-token, targets.json, application.json).
+ * 2. Muat konfigurasi aplikasi via `loadApplicationConfig()`.
+ * 3. Instansiasi `DiagnosticApplication` dan jalankan `application.start()`.
+ * 4. Lakukan pemanggilan HTTPS GET `/health/ready` menggunakan TLS certificate.
+ * 5. Verifikasi HTTP status 200 dan payload ready = true.
+ * 6. Eksekusi `application.shutdown()` dan verifikasi status accepting = false serta ready = false.
+ * 7. Buka database SQLite read-only dan verifikasi seluruh skema migrasi terpasang lengkap.
+ */
+
 import assert from "node:assert/strict";
 import { writeFileSync } from "node:fs";
 import { request as httpsRequest } from "node:https";

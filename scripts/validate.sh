@@ -9,6 +9,18 @@
 # Memverifikasi governance dan metadata source baseline tanpa memasang
 # dependency, mengakses network, membangun image, atau menjalankan container.
 #
+# Pseudocode Alur Eksekusi:
+# ------------------------
+# 1. Inisialisasi konstanta path direktori skrip dan root proyek.
+# 2. Definisikan fungsi assertion `fail`, `require_command`, dan `require_file`.
+# 3. Verifikasi dependensi host wajib: python3 dan rg (ripgrep).
+# 4. Verifikasi keberadaan seluruh daftar berkas wajib (required_files).
+# 5. Validasi konsistensi identitas proyek, semantic version, engine Node.js, dan base image ID.
+# 6. Jalankan skrip embedded Python untuk memvalidasi isi package.json dan package-lock.json.
+# 7. Jalankan skrip embedded Python untuk memvalidasi isi Containerfile dan .containerignore.
+# 8. Periksa sintaksis seluruh file skrip shell via `bash -n`.
+# 9. Jalankan pemindaian regex ripgrep untuk mencegah unapproved dependencies, forbidden imports, dan secret leaks.
+#
 # Penggunaan
 # ---------
 # ./scripts/validate.sh

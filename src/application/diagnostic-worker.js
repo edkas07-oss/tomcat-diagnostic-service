@@ -3,6 +3,27 @@
  * @project Tomcat Diagnostic Service
  * @description Worker asinkron loop tunggal (Single Worker Loop) untuk pemrosesan antrean dan eksekusi diagnosis insiden.
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. runOnce():
+ *    a. Klaim item tertua dari antrean kerja via `repository.claimNext()`. Jika kosong -> return null.
+ *    b. Ambil data event dari repository.
+ *    c. Jika event berstatus "resolved":
+ *       - Bentuk canonical result pemulihan via `resolvedResult()`.
+ *       - Cek reservasi slot notifikasi resolved (maks 1x per insiden).
+ *    d. Jika event berstatus "firing":
+ *       - Kumpulkan bukti telemetri via `collectEvidence(event)` dengan batas timeout.
+ *       - Evaluasi aturan keputusan melalui `evaluator(evidence)`.
+ *       - Susun canonical result standar v1 (`diagnosticResult()`).
+ *       - Periksa apakah ini insiden pertama atau terdapat perubahan materiil (`isMaterialChange()`).
+ *    e. Simpan canonical result dan ringkasan bukti ke database SQLite.
+ *    f. Jika diizinkan notifikasi: render laporan 7-seksi SRE dan kirim via SMTP (`notification.deliver()`).
+ *    g. Tandai tugas antrean selesai (`complete(item.id, true)`).
+ *    h. Jika terjadi error: tandai tugas gagal (`complete(item.id, false)`).
+ * 2. start() & stop():
+ *    - Jalankan interval pemrosesan berulang (idle delay 100ms saat tidak ada pekerjaan).
+ *    - Hentikan loop dengan aman saat menerima sinyal shutdown.
+ *
  * Prinsip & Batasan Arsitektur (TN-007):
  * - Sequential Processing: Memproses antrean satu per satu (concurrency = 1) untuk mencegah race condition / lock contention.
  * - Evidence & Evaluation Pipeline: Mengambil bukti terisolasi, mengevaluasi aturan deterministik, dan menyusun hasil kanonikal v1.

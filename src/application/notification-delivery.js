@@ -3,6 +3,23 @@
  * @project Tomcat Diagnostic Service
  * @description Orkestrator pengiriman notifikasi insiden dengan kebijakan retry terikat (bounded retry policy).
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. notificationErrorCode(error):
+ *    - Kategorisasi kode error Node.js/Nodemailer menjadi kode kanonikal:
+ *      ETIMEDOUT -> 'timeout', EAUTH -> 'authentication', ECONN* -> 'connection', responseCode 5xx -> 'smtp_5xx', dll.
+ * 2. NotificationDelivery.deliver(resultId, result, rendered):
+ *    a. Catat waktu mulai pengiriman (startedAt).
+ *    b. Loop percobaan pengiriman dari attempt = 1 hingga `policy.maxAttempts` (3):
+ *       - Jika attempt > 1: hitung delay backoff (1000ms, 5000ms).
+ *       - Periksa batas umur total (`maxAgeMs` 60s); jika terlampaui hentikan retry loop.
+ *       - Tunggu selama delay (`sleep(delay)`).
+ *       - Catat permulaan upaya ke tabel `notification_attempts` (status pending).
+ *       - Eksekusi pengiriman email via `smtp.send(result, rendered)`.
+ *       - Jika berhasil: update status menjadi 'sent' pada database dan naikkan metrik ketersediaan. Kembalikan `{ status: 'sent', attempts }`.
+ *       - Jika gagal: kategorikan error code via `notificationErrorCode(error)` dan update status menjadi 'failed'.
+ *    c. Jika semua percobaan gagal: catat kegagalan akhir ke metrik dan kembalikan `{ status: 'failed', attempts, errorCode }`.
+ *
  * Prinsip & Batasan Arsitektur (TN-008, TN-012):
  * - Bounded Retry Policy: Maksimal 3 kali percobaan (attempt 1, backoff 1s, backoff 5s) dengan usia maksimal 60 detik.
  * - Categorized Error Codes: Memetakan kegagalan transport ke kode kanonikal (`timeout`, `authentication`, `connection`, `smtp_5xx`, `smtp_4xx`).

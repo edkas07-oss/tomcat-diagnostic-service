@@ -1,3 +1,18 @@
+/**
+ * @file test/unit/http-service.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian unit Request Handler HTTP (Auth, Media Type, Payload Size Bound, Health/Metrics).
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test "HTTP boundary rejects auth, media type, and oversized bodies":
+ *    - Verifikasi penolakan tanpa header authorization (HTTP 401).
+ *    - Verifikasi penolakan media type text/plain (HTTP 415).
+ *    - Verifikasi penolakan payload melebihi 256 KiB (HTTP 413).
+ * 2. Test "health and metrics interfaces expose bounded state":
+ *    - Verifikasi endpoint `/health/live` (200), `/health/ready` (200), dan `/metrics` (200).
+ */
+
 import assert from "node:assert/strict";
 import { Readable } from "node:stream";
 import { test } from "node:test";

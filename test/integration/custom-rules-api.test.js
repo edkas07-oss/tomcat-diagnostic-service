@@ -1,3 +1,20 @@
+/**
+ * @file test/integration/custom-rules-api.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian integrasi Declarative Rulepack Ingestion API (5-Layer Guard, persistensi, hot-reload, catalog query).
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Inisialisasi database SQLite sementara dan muat skema migrasi.
+ * 2. Inisialisasi DynamicRuleEvaluator, RulepackValidator, dan createRequestHandler.
+ * 3. Uji autentikasi: GET/POST tanpa Bearer auth -> HTTP 401 Unauthorized.
+ * 4. Uji validasi skema: kirim payload invalid -> HTTP 400 invalid_rule_schema.
+ * 5. Uji validasi branch collision: kirim branch built-in `TD-01` -> HTTP 409 Rule Collision.
+ * 6. Uji persistensi dan hot-reload: kirim rulepack valid `TD-09` (category database) -> HTTP 201 Created.
+ * 7. Verifikasi dynamic evaluator mengenali aturan baru tanpa restart service (hot-reloaded).
+ * 8. Uji query katalog: GET `/api/v1/rules?category=database` dan verifikasi filtering berhasil.
+ */
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import { dirname, join } from "node:path";

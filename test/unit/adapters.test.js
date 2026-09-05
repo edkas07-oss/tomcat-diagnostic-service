@@ -1,3 +1,15 @@
+/**
+ * @file test/unit/adapters.test.js
+ * @project Tomcat Diagnostic Service
+ * @description Pengujian unit adapter telemetri Prometheus dan probe Application Health.
+ *
+ * Pseudocode Alur Pengujian:
+ * --------------------------
+ * 1. Test Prometheus query: verifikasi 1 kueri instan tanpa retry berlebih dan status `collected`.
+ * 2. Test Prometheus timeout: verifikasi penanganan TimeoutError tanpa retry dan status `timeout`.
+ * 3. Test Application Health: verifikasi pencatatan status HTTP (`httpStatus`, `up`) tanpa membocorkan body respons.
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { PrometheusAdapter } from "../../src/adapters/prometheus-adapter.js";

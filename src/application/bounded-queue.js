@@ -3,6 +3,18 @@
  * @project Tomcat Diagnostic Service
  * @description Pengelola antrean kerja berbatas kapasitas (Bounded Queue) untuk tugas diagnosis asinkron.
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. BoundedWorkQueue.constructor(repository, { capacity }):
+ *    - Validasi parameter kapasitas (harus bilangan bulat positif >= 1).
+ *    - Simpan referensi repository dan batas kapasitas antrean.
+ * 2. accept(request):
+ *    - Teruskan request ke `repository.accept()` dengan batas queueCapacity.
+ * 3. claim():
+ *    - Klaim tugas tertua yang siap diproses via `repository.claimNext()`.
+ * 4. complete(queueId, succeeded):
+ *    - Finalisasi status tugas antrean via `repository.complete()`.
+ *
  * Prinsip & Batasan Arsitektur (TN-005):
  * - Kapasitas Berbatas Ketat: Default kapasitas maksimum 50 item antrean (`work_queue`) untuk mencegah kehabisan memori/disk.
  * - Penolakan Transaksional: Melempar `QueueCapacityError` ketika batas kapasitas terlampaui sehingga request di-rollback.

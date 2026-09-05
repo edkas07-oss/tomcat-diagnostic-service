@@ -3,6 +3,19 @@
  * @project Tomcat Diagnostic Service
  * @description Adapter pembaca bukti file spool status runtime container dari spool collector.
  *
+ * Pseudocode Alur Eksekusi:
+ * ------------------------
+ * 1. Periksa apakah target memiliki direktori `collectorSpool`. Jika tidak ada, kembalikan array kosong `[]`.
+ * 2. Baca daftar nama berkas dalam direktori spool, filter hanya berkas berakhiran `.json`.
+ * 3. Urutkan nama berkas secara leksikografis dan ambil maksimal `maxFiles` berkas terbaru (slice `-maxFiles`).
+ * 4. Untuk setiap berkas spool:
+ *    a. Baca isi berkas via `readBoundedFile()` dengan batas 16 KiB dan 200 baris.
+ *    b. Jika berkas terpotong (truncated), lewati berkas tersebut.
+ *    c. Parse JSON objek bukti collector.
+ *    d. Bentuk objek Evidence standar melalui `createEvidence()`.
+ *    e. Periksa apakah evidence berada dalam jendela observasi target (`withinWindow()`); jika ya, masukkan ke daftar records.
+ * 5. Kembalikan daftar array records bukti collector.
+ *
  * Prinsip & Batasan Arsitektur (TN-006):
  * - Spool Ingestion: Membaca berkas `.json` status runtime container yang ditulis atomik oleh collector.
  * - Window Isolation: Memfilter rekaman hanya yang berada dalam jendela waktu observasi insiden.
