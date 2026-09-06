@@ -58,6 +58,7 @@ required_files=(
     AGENTS.md
     .containerignore
     Containerfile
+    LICENSE
     README.md
     PROJECT
     VERSION

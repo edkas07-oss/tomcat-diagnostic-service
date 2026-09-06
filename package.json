@@ -3,6 +3,8 @@
   "version": "0.1.4",
   "private": true,
   "description": "Bounded deterministic diagnostic service for the Tomcat Monitoring pilot",
+  "author": "Eddy Wiyatno <edkas07@gmail.com>",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "tomcat-diagnostic-service": "src/main.js"

@@ -73,6 +73,7 @@ tomcat-diagnostic-service/
 ├── AGENTS.md          Tata kelola agen dan batasan repositori
 ├── CONFIG             Metadata toolchain non-secret
 ├── Containerfile      Digest-pinned application container image
+├── LICENSE            Lisensi open-source proyek (MIT License)
 ├── PROJECT            Identitas project yang dapat dibaca script
 ├── README.md          Spesifikasi kontrak dan status implementasi
 ├── VERSION            Versi rilis aplikasi (saat ini: 0.1.4)
@@ -167,3 +168,18 @@ Header Wajib: `Authorization: Bearer <token>`
 * **Engineering Journal Diagnostic MVP Pilot:** [`devops-handbook/docs/projects/tomcat-monitoring/engineering-journal/diagnostic-mvp-pilot/`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/engineering-journal/diagnostic-mvp-pilot/)
 * **Architecture Decision Records (ADR):** [`devops-handbook/docs/adr/tomcat-monitoring/`](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/)
 * **AI Knowledge Runbook:** [`devops-handbook/docs/projects/tomcat-monitoring/operations/ai-knowledge-enrichment-and-rule-management-runbook.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/operations/ai-knowledge-enrichment-and-rule-management-runbook.md)
+
+---
+
+## 👤 Author & Maintainer
+
+* **Lead Engineer & Creator:** Eddy Wiyatno (<edkas07@gmail.com>)
+* **Role:** Senior DevOps & Reliability Engineer
+* **Project:** Tomcat Monitoring & Diagnostics Platform
+
+---
+
+## 📄 License
+
+Proyek ini dilisensikan di bawah [MIT License](LICENSE).
+Copyright © 2026 Eddy Wiyatno. All rights reserved.

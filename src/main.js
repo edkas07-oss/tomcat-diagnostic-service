@@ -1,6 +1,8 @@
 /**
  * @file src/main.js
  * @project Tomcat Diagnostic Service
+ * @author Eddy Wiyatno <edkas07@gmail.com>
+ * @license MIT
  * @description Entrypoint CLI aplikasi Tomcat Diagnostic Service.
  *
  * Pseudocode Alur Eksekusi:
