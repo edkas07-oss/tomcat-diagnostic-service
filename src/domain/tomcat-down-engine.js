@@ -1,6 +1,8 @@
 /**
  * @file src/domain/tomcat-down-engine.js
  * @project Tomcat Diagnostic Service
+ * @author Eddy Wiyatno <edkas07@gmail.com>
+ * @license Proprietary & Confidential
  * @description Decision Engine Deterministik Layer 1 untuk insiden TomcatDown (Built-in Branches TD-01..TD-08).
  *
  * Pseudocode Alur Eksekusi:

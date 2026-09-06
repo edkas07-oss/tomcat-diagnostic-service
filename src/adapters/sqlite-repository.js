@@ -1,6 +1,8 @@
 /**
  * @file src/adapters/sqlite-repository.js
  * @project Tomcat Diagnostic Service
+ * @author Eddy Wiyatno <edkas07@gmail.com>
+ * @license Proprietary & Confidential
  * @description Adapter persistensi database SQLite menggunakan engine bawaan `node:sqlite`.
  *
  * Pseudocode Alur Eksekusi:

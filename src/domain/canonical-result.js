@@ -1,6 +1,8 @@
 /**
  * @file src/domain/canonical-result.js
  * @project Tomcat Diagnostic Service
+ * @author Eddy Wiyatno <edkas07@gmail.com>
+ * @license Proprietary & Confidential
  * @description Domain model pembentukan Canonical Result v1 dan deteksi perubahan material insiden.
  *
  * Pseudocode Alur Eksekusi:

@@ -1,6 +1,8 @@
 /**
  * @file src/domain/rulepack-loader.js
  * @project Tomcat Diagnostic Service
+ * @author Eddy Wiyatno <edkas07@gmail.com>
+ * @license Proprietary & Confidential
  * @description Dynamic Rule Evaluator (Layer 2) dan Loader Declarative Rulepack.
  *
  * Pseudocode Alur Eksekusi:

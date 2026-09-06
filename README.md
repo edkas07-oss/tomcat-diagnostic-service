@@ -73,7 +73,7 @@ tomcat-diagnostic-service/
 ├── AGENTS.md          Tata kelola agen dan batasan repositori
 ├── CONFIG             Metadata toolchain non-secret
 ├── Containerfile      Digest-pinned application container image
-├── LICENSE            Lisensi open-source proyek (MIT License)
+├── LICENSE            Lisensi eksklusif kepemilikan (Proprietary & Confidential)
 ├── PROJECT            Identitas project yang dapat dibaca script
 ├── README.md          Spesifikasi kontrak dan status implementasi
 ├── VERSION            Versi rilis aplikasi (saat ini: 0.1.4)
@@ -179,7 +179,9 @@ Header Wajib: `Authorization: Bearer <token>`
 
 ---
 
-## 📄 License
+## 📄 License & Intellectual Property Notice
 
-Proyek ini dilisensikan di bawah [MIT License](LICENSE).
-Copyright © 2026 Eddy Wiyatno. All rights reserved.
+**PROPRIETARY AND CONFIDENTIAL**
+**Hak Cipta © 2026 Eddy Wiyatno. Seluruh hak dilindungi undang-undang.**
+
+Seluruh ide, diagram, arsitektur sistem, dan spesifikasi teknis dalam repositori ini merupakan hak kekayaan intelektual (HKI) eksklusif milik **Eddy Wiyatno**. Dilarang keras menyalin, merekayasa balik (*reverse-engineering*), menyebarluaskan, atau memanfaatkannya untuk kepentingan pihak ketiga tanpa persetujuan tertulis resmi dari pemilik hak cipta. Lihat berkas [`LICENSE`](LICENSE) untuk pernyataan lengkap.

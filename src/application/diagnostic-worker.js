@@ -1,6 +1,8 @@
 /**
  * @file src/application/diagnostic-worker.js
  * @project Tomcat Diagnostic Service
+ * @author Eddy Wiyatno <edkas07@gmail.com>
+ * @license Proprietary & Confidential
  * @description Worker asinkron loop tunggal (Single Worker Loop) untuk pemrosesan antrean dan eksekusi diagnosis insiden.
  *
  * Pseudocode Alur Eksekusi:

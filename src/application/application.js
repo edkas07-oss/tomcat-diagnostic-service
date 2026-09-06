@@ -1,6 +1,8 @@
 /**
  * @file src/application/application.js
  * @project Tomcat Diagnostic Service
+ * @author Eddy Wiyatno <edkas07@gmail.com>
+ * @license Proprietary & Confidential
  * @description Komposer siklus hidup aplikasi (Application Lifecycle Composer).
  *
  * Pseudocode Alur Eksekusi:

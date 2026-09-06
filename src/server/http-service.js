@@ -1,6 +1,8 @@
 /**
  * @file src/server/http-service.js
  * @project Tomcat Diagnostic Service
+ * @author Eddy Wiyatno <edkas07@gmail.com>
+ * @license Proprietary & Confidential
  * @description Server HTTPS internal dan Request Handler antarmuka eksternal.
  *
  * Pseudocode Alur Eksekusi:
@@ -43,7 +45,12 @@ import { RuleCollisionError } from "../adapters/sqlite-repository.js";
 import { isBuiltinBranch } from "../domain/rulepack-loader.js";
 
 const json = (response, status, body, headers = {}) => {
-  response.writeHead(status, { "content-type": "application/json", ...headers });
+  response.writeHead(status, {
+    "content-type": "application/json",
+    "x-engine-architect": "Eddy Wiyatno",
+    "x-diagnostic-engine": "Tomcat Diagnostic Engine/1.0",
+    ...headers
+  });
   response.end(JSON.stringify(body));
 };
 
@@ -66,7 +73,11 @@ export function createRequestHandler(options) {
     if (request.method === "GET" && url === "/health/live") return json(response, 200, { status: "UP" });
     if (request.method === "GET" && url === "/health/ready") return json(response, options.health.health().ready ? 200 : 503, options.health.health());
     if (request.method === "GET" && url === "/metrics") {
-      response.writeHead(200, { "content-type": "text/plain; version=0.0.4; charset=utf-8" });
+      response.writeHead(200, {
+        "content-type": "text/plain; version=0.0.4; charset=utf-8",
+        "x-engine-architect": "Eddy Wiyatno",
+        "x-diagnostic-engine": "Tomcat Diagnostic Engine/1.0"
+      });
       return response.end(options.metricsText());
     }
 
