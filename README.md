@@ -2,24 +2,33 @@
 
 Repository ini berisi aplikasi core **Tomcat Diagnostic Service** untuk platform Tomcat Monitoring & Diagnostics. Layanan ini bertindak sebagai *Autonomous Diagnostic Engine* yang menerima webhook alert `TomcatDown` dari Alertmanager, melakukan korelasi bukti log, artefak crash, dan telemetri runtime secara deterministik, mengevaluasi basis aturan (*Declarative Rulepack Engine*), mengelola persistensi siklus hidup diagnosis pada SQLite, serta menerbitkan laporan diagnosis terstruktur 7 seksi dengan rekomendasi SOP operator via SMTP (Mailpit/Email).
 
-Layanan ini dirancang berdasarkan prinsip **Deterministic Honesty** dan **Human-in-the-Loop Governance** — sistem tidak melakukan *automatic remediation* atau manipulasi proses container Tomcat secara sewenang-wenang.
+Layanan ini dirancang berdasarkan prinsip **Deterministic Honesty** dan **Human-in-the-Loop Governance** — sistem tidak melakukan *automatic remediation* atau manipulasi proses container Tomcat secara sewenang-wenang (TM-ADR-0014).
 
 ---
 
 ## 🏛️ Fitur & Kapabilitas Utama
 
-1. **Durable Alert Ingestion & Queue:** Ingestion webhook Alertmanager v4 melalui HTTPS TLS dengan deduplikasi persisten dan antrean berkapasitas 50 event.
-2. **Deterministic & Declarative Rulepack Engine:** Pohon keputusan deterministik 18 cabang:
-   - **8 Built-in Branches (`TD-01` s/d `TD-08`):** TLS scrape unavailable, OOM Killed, JVM Crash, Port bind conflict, Orderly shutdown, Container exited unknown, Contradicting state, dan Undetermined evidence.
+1. **Durable Alert Ingestion & Queue:** Ingestion webhook Alertmanager v4 melalui HTTPS TLS dengan deduplikasi persisten dan antrean berkapasitas 50 event (TM-ADR-0015).
+2. **Target Isolation & Bounded Evidence Adapters:** Registri target terisolasi berbasis allowlist (`targets.json`), pengurungan path absolut ternormalisasi (anti-path traversal `../` dan anti-symlink), pembatasan kuota baca log (`catalina.out` maks 500 baris / 512 KiB) dengan sensor redaksi data sensitif (password/token/credential), pembatasan spool collector atomik (maks 200 berkas / 16 KiB per record), Prometheus API query (one-attempt timeout 5s), dan HTTPS application health probe (timeout 3s tanpa menyimpan response body).
+3. **Deterministic & Declarative Rulepack Engine:** Pohon keputusan deterministik 18 cabang:
+   - **8 Built-in Branches (`TD-01` s/d `TD-08`):**
+     - `TD-01`: *JMX/TLS Scrape Unavailable*
+     - `TD-02`: *Confirmed OOM Killer (Cgroup/Exit 137)*
+     - `TD-03`: *Correlated JVM Fatal Crash (`hs_err`)*
+     - `TD-04`: *Port Bind / Socket Conflict*
+     - `TD-05`: *Orderly Clean Shutdown*
+     - `TD-06`: *Uncorrelated Container Exit*
+     - `TD-07`: *Probable Unresponsive / Long Thread Pause*
+     - `TD-08`: *Contradicting / Undetermined State*
    - **10 Curated Custom Branches (`TD-09` s/d `TD-18`):** Database pool exhaustion, Thread pool exhaustion, Heap OOM, Metaspace OOM, SSL Handshake failure, HikariCP timeout, Context init failure, Thread deadlock, Socket read timeout, dan SQL timeout.
-3. **Formal Rule Categorization (*Failure Domains*):** Pengelompokan aturan diagnosis berbasis 8 enum kategori resmi (`jvm_memory`, `concurrency_threading`, `database_persistence`, `network_integration`, `application_lifecycle`, `storage_os_limits`, `security_session`, `general`) pada skema JSON, SQLite, dan laporan email.
-4. **Safe Hot-Reload Rules API (`/api/v1/rules`):**
+4. **Formal Rule Categorization (*Failure Domains*):** Pengelompokan aturan diagnosis berbasis 8 enum kategori resmi (`jvm_memory`, `concurrency_threading`, `database_persistence`, `network_integration`, `application_lifecycle`, `storage_os_limits`, `security_session`, `general`) pada skema JSON, SQLite, dan laporan email.
+5. **Safe Hot-Reload Rules API (`/api/v1/rules`):**
    - Ingestion aturan baru secara *live* tanpa *restart container* (*zero-downtime hot-reload*).
    - Ekspor dan filtering katalog aturan berbasis domain query parameter (`GET /api/v1/rules?category=<name>`).
    - Dilindungi oleh **5-Layer Ingestion Defense-in-Depth** (Auth Guard, Schema Guard, Collision Guard, Payload Size Guard, dan Append-Only Immutability Guard).
-5. **Resilient Notification Delivery:** Single worker loop dengan retry berbatas (*exponential backoff* 1s & 5s, maks 3 percobaan) dan korelasi *resolved state*.
-6. **SQLite Persistence:** Migrasi schema forward-only (`001` s/d `006`), tabel `events`, `incidents`, `canonical_results`, `evidence_summaries`, `delivery_attempts`, `notification_attempts`, dan `custom_rules` (termasuk kolom `category`).
-7. **Observability:** Endpoint `/health/live`, `/health/ready`, dan `/metrics` (Prometheus text format).
+6. **Resilient Notification Delivery:** Single worker loop dengan batasan deadline 60 detik, retry berbatas (*exponential backoff* 1s & 5s, maks 3 percobaan), proteksi *material update guard*, dan korelasi *resolved state* (TM-ADR-0016).
+7. **SQLite Persistence:** Migrasi schema forward-only (`001` s/d `006`), tabel `events`, `incidents`, `canonical_results`, `evidence_summaries`, `delivery_attempts`, `notification_attempts`, dan `custom_rules` (termasuk kolom `category`) berbasis `node:sqlite` (TM-ADR-0013).
+8. **Observability:** Endpoint `/health/live`, `/health/ready`, dan `/metrics` (Prometheus text format).
 
 ---
 
@@ -48,6 +57,12 @@ Sistem mengadopsi taksonomi **8 Kategori Domain Kegagalan** untuk menstrukturkan
 - **JSON Schema Validator:** Exact-pinned `ajv@8.20.0`.
 - **SMTP Client:** Exact-pinned `nodemailer@9.0.6`.
 - **Base Container Image:** `localhost/nodejs:24.18.0` (Digest pinned).
+- **Kepatuhan Arsitektur (ADR):**
+  - [TM-ADR-0013](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0013.md) — *Node.js 24 ESM & Isolated Built-in `node:sqlite`*
+  - [TM-ADR-0014](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0014.md) — *Enforce Zero Automatic Remediation for Diagnostic Service*
+  - [TM-ADR-0015](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0015.md) — *Asynchronous Webhook Ingestion with Durable SQLite Acceptance Pattern*
+  - [TM-ADR-0016](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0016.md) — *Designate Diagnostic Service as Canonical Incident Notification Authority*
+  - [TM-ADR-0017](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0017.md) — *Adopt Vertical Slice Minimum Viable Product Scoping for Diagnostic Pilot*
 
 ---
 
@@ -76,7 +91,7 @@ tomcat-diagnostic-service/
 │   └── 006-rule-category.sql
 ├── src/               Kode sumber aplikasi:
 │   ├── adapters/      SQLite repository, SMTP sender, & Evidence collectors
-│   ├── application/   Diagnostic worker, Result renderer, & Notification orchestrator
+│   ├── application/   Diagnostic worker, Result renderer, Target registry, & Notification orchestrator
 │   ├── domain/        Deterministic engine, Rulepack loader, & Dynamic evaluator
 │   └── server/        HTTPS server, Authentication, Routes, & Schema validators
 ├── test/              Unit dan temporary-SQLite integration test suites (47 unit tests)
@@ -98,7 +113,7 @@ tomcat-diagnostic-service/
 
 ### 2. Unit & Integration Tests (47 Tests)
 ```bash
-podman run --rm -v $(pwd):/app -w /app localhost/nodejs:latest npm test
+podman run --rm --userns=keep-id -v $(pwd):/app:Z -w /app localhost/nodejs:24.18.0 npm test
 ```
 
 ### 3. Container Image Build
@@ -130,6 +145,7 @@ Header Wajib: `Authorization: Bearer <token>`
 | :--- | :---: | :--- |
 | **Repository Governance & Boundaries** | ✅ Selesai | Pinned toolchain, ESM, no-framework |
 | **Alertmanager Ingestion & Queue** | ✅ Selesai | Webhook v4, deduplikasi, kapasitas 50 |
+| **Target Isolation & Evidence Adapters**| ✅ Selesai | Allowlist targets, anti-traversal, bounded log/spool |
 | **SQLite Persistence & Migrations** | ✅ Selesai | 6 migration files, zero-data loss |
 | **Decision Engine (TD-01..TD-08)** | ✅ Selesai | Deterministic honesty, 7-section reports |
 | **Custom Rule Engine (TD-09..TD-18)**| ✅ Selesai | Dynamic rulepack evaluation & hot-reloading |
@@ -143,6 +159,11 @@ Header Wajib: `Authorization: Bearer <token>`
 
 ## 📖 Dokumentasi Terkait
 
-* **DevOps Handbook:** [`devops-handbook/docs/projects/tomcat-monitoring/`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/)
+* **Target and Evidence Contract:** [`devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/target-and-evidence-contract.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/target-and-evidence-contract.md)
+* **TomcatDown Rule Specification:** [`devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/tomcat-down-rule-specification.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/tomcat-down-rule-specification.md)
+* **Alertmanager Webhook Contract:** [`devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/alertmanager-webhook-contract.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/alertmanager-webhook-contract.md)
+* **Diagnostic Result & Confidence Contract:** [`devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/diagnostic-result-and-confidence-contract.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/diagnostic-result-and-confidence-contract.md)
+* **Non-Functional & Security Contract:** [`devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/non-functional-and-security-contract.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/non-functional-and-security-contract.md)
+* **Engineering Journal Diagnostic MVP Pilot:** [`devops-handbook/docs/projects/tomcat-monitoring/engineering-journal/diagnostic-mvp-pilot/`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/engineering-journal/diagnostic-mvp-pilot/)
+* **Architecture Decision Records (ADR):** [`devops-handbook/docs/adr/tomcat-monitoring/`](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/)
 * **AI Knowledge Runbook:** [`devops-handbook/docs/projects/tomcat-monitoring/operations/ai-knowledge-enrichment-and-rule-management-runbook.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/operations/ai-knowledge-enrichment-and-rule-management-runbook.md)
-* **Engineering Journal TN-018 & TN-019:** [`devops-handbook/docs/projects/tomcat-monitoring/engineering-journal/diagnostic-mvp-pilot/`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/engineering-journal/diagnostic-mvp-pilot/)
