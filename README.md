@@ -1,6 +1,6 @@
 # Tomcat Diagnostic Service
 
-Repository ini berisi aplikasi core **Tomcat Diagnostic Service** untuk platform Tomcat Monitoring & Diagnostics. Layanan ini bertindak sebagai *Autonomous Diagnostic Engine* yang menerima webhook alert `TomcatDown` dari Alertmanager, melakukan korelasi bukti log, artefak crash, dan telemetri runtime secara deterministik, mengevaluasi basis aturan (*Declarative Rulepack Engine*), mengelola persistensi siklus hidup diagnosis pada SQLite, serta menerbitkan laporan diagnosis terstruktur 7 seksi dengan rekomendasi SOP operator via SMTP (Mailpit/Email).
+Repository ini berisi aplikasi core **Tomcat Diagnostic Service** untuk platform Tomcat Monitoring & Diagnostics. Layanan ini bertindak sebagai *Autonomous Diagnostic Engine & Decision Authority* yang menerima webhook alert insiden dan anomali ketersediaan runtime dari Alertmanager, melakukan korelasi bukti log (*catalina.out*), artefak crash (*fatal JVM crash / OOM dump*), snapshot container, dan telemetri runtime secara deterministik, mengevaluasi basis aturan terstruktur (*Declarative Rulepack Engine*), mengelola persistensi siklus hidup diagnosis pada database SQLite, serta menerbitkan laporan diagnosis terstruktur 7 seksi dengan rekomendasi SOP tindakan operator via SMTP (Mailpit/Email).
 
 Layanan ini dirancang berdasarkan prinsip **Deterministic Honesty** dan **Human-in-the-Loop Governance** — sistem tidak melakukan *automatic remediation* atau manipulasi proses container Tomcat secara sewenang-wenang (TM-ADR-0014).
 
@@ -53,8 +53,8 @@ Sistem mengadopsi taksonomi **8 Kategori Domain Kegagalan** untuk menstrukturkan
 
 Laporan diagnosis insiden diterbitkan dalam format *HTML multi-part* dan *Plain Text* terstruktur 7 seksi kanonikal (TN-007):
 
-1. **Section 1: Incident Header & Target Context** — Identitas insiden, target instance (`environment`, `host`, `tomcat_instance`), status alert (`FIRING` / `RESOLVED`), dan stempel waktu UTC/lokal.
-2. **Section 2: Primary Root Cause & Decision Branch** — Klasifikasi cabang keputusan deterministik (`TD-01` s/d `TD-18`) beserta deskripsi ringkas akar masalah.
+1. **Section 1: Incident Header & Target Context** — Identitas insiden, nama alert (`alertname`), target instance (`environment`, `host`, `tomcat_instance`), status alert (`FIRING` / `RESOLVED`), dan stempel waktu UTC/lokal.
+2. **Section 2: Primary Root Cause & Decision Branch** — Klasifikasi cabang keputusan deterministik (`TD-01` s/d `TD-18` atau custom rulepack) beserta deskripsi ringkas akar masalah.
 3. **Section 3: Failure Domain Classification** — Klasifikasi kategori domain kegagalan resmi (`jvm_memory`, `database_persistence`, dll.) untuk memandu eskalasi on-call.
 4. **Section 4: Diagnostic Confidence Score & Evaluation Matrix** — Tingkat kepastian hasil diagnosis (`HIGH`, `MEDIUM`, `LOW`) berdasarkan kelengkapan bukti pendukung.
 5. **Section 5: Correlated Evidence Summary** — Ringkasan bukti terkorelasi:
@@ -82,12 +82,12 @@ Setiap payload alert wajib memenuhi skema `config/schemas/alertmanager-webhook-v
 
 | Label Name | Nilai Contoh | Validasi & Kebutuhan |
 | :--- | :--- | :--- |
-| `alertname` | `TomcatDown` | Wajib; alert insiden ketersediaan Tomcat |
+| `alertname` | `TomcatDown`, `TomcatThreadExhaustion`, dll. | Wajib; identitas nama alert insiden |
 | `environment` | `lab`, `production` | Wajib; identitas lingkungan target |
 | `host` | `tomcat-01`, `edkas-pc1` | Wajib; hostname mesin target |
 | `tomcat_instance` | `default`, `tomcat-jmx-exporter` | Wajib; identitas instance workload |
-| `check` | `runtime-availability` | Wajib; membedakan alert runtime vs synthetic check |
-| `severity` | `critical` | Wajib; tingkat keparahan insiden |
+| `check` | `runtime-availability`, `application-health`, dll. | Wajib; klasifikasi tipe pemeriksaan telemetri |
+| `severity` | `critical`, `warning` | Wajib; tingkat keparahan insiden |
 
 Alertmanager sub-route dikonfigurasi dengan `continue: false` dan `max_alerts: 1` untuk menjamin isolasi delivery.
 
@@ -331,7 +331,7 @@ podman run --rm --userns=keep-id -v $(pwd):/app:Z -w /app localhost/nodejs:24.18
 ## 📖 Dokumentasi Terkait
 
 * **Target and Evidence Contract:** [`devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/target-and-evidence-contract.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/target-and-evidence-contract.md)
-* **TomcatDown Rule Specification:** [`devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/tomcat-down-rule-specification.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/tomcat-down-rule-specification.md)
+* **Rule Specification & Decision Matrix:** [`devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/tomcat-down-rule-specification.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/tomcat-down-rule-specification.md)
 * **Alertmanager Webhook Contract:** [`devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/alertmanager-webhook-contract.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/alertmanager-webhook-contract.md)
 * **Diagnostic Result & Confidence Contract:** [`devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/diagnostic-result-and-confidence-contract.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/diagnostic-result-and-confidence-contract.md)
 * **Non-Functional & Security Contract:** [`devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/non-functional-and-security-contract.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/non-functional-and-security-contract.md)
