@@ -204,7 +204,7 @@ podman run --detach --pull=never \
     --network devops-lab \
     --network-alias diagnostic-service \
     --publish 8443:8443 \
-    --restart=no \
+    --restart=on-failure:5 \
     --volume "/path/to/application.json:/run/tomcat-diagnostic/application.json:ro,z" \
     --volume "/path/to/targets.json:/run/tomcat-diagnostic/config/targets.json:ro,z" \
     --volume "/path/to/bearer-token:/run/tomcat-diagnostic/secrets/bearer-token:ro,z" \
@@ -247,6 +247,10 @@ podman run --detach --pull=never \
   - [TM-ADR-0015](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0015.md) — *Asynchronous Webhook Ingestion with Durable SQLite Acceptance Pattern*
   - [TM-ADR-0016](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0016.md) — *Designate Diagnostic Service as Canonical Incident Notification Authority*
   - [TM-ADR-0017](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0017.md) — *Adopt Vertical Slice Minimum Viable Product Scoping for Diagnostic Pilot*
+  - [TM-ADR-0018](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0018.md) — *Adopt Declarative Rulepack Engine with Dynamic Hot-Reloading*
+  - [TM-ADR-0019](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0019.md) — *Adopt AI-Augmented Knowledge Enrichment Workflow with Human-in-the-Loop Governance*
+  - [TM-ADR-0020](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0020.md) — *Adopt Diagnostic Service Self-Monitoring and Emergency Fallback Routing*
+  - [TM-ADR-0021](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0021.md) — *Adopt Layered Failure Resilience, Container Auto-Healing, and Monitoring Domain Separation*
 
 ---
 
