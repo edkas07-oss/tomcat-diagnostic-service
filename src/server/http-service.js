@@ -72,7 +72,7 @@ export function createRequestHandler(options) {
 
     if (request.method === "GET" && url === "/health/live") return json(response, 200, { status: "UP" });
     if (request.method === "GET" && url === "/health/ready") return json(response, options.health.health().ready ? 200 : 503, options.health.health());
-    if (request.method === "GET" && url === "/metrics") {
+    if (request.method === "GET" && (url === "/health" || url === "/metrics")) {
       response.writeHead(200, {
         "content-type": "text/plain; version=0.0.4; charset=utf-8",
         "x-engine-architect": "Eddy Wiyatno",
