@@ -38,7 +38,7 @@ export function buildCanonicalResult(input) {
   const unavailableSources = evidence.filter((item) => item.status !== "collected").map(({ source, status }) => ({ source, status }));
   const core = stable({ schemaVersion: 1, diagnosticId: input.diagnosticId, ruleId: input.assessment.ruleId, ruleVersion: input.assessment.ruleVersion, fingerprint: input.event.fingerprint, lifecycleStatus: input.event.status, startsAt: input.event.startsAt, endsAt: input.event.endsAt, eventKey: input.event.eventKey, targetId: input.targetId, generation: input.generation ?? null, processingStatus: input.processingStatus, evidence, observations: input.observations ?? [], unavailableSources, contradictions: input.contradictions ?? [], assessment: input.assessment, contributingFactors: input.contributingFactors ?? [], recommendedActions: input.recommendedActions ?? [], redaction: { applied: evidence.some((item) => item.redacted) } });
   const resultHash = createHash("sha256").update(JSON.stringify(core)).digest("hex");
-  return { ...core, timing: input.timing, resultHash };
+  return { ...core, event: input.event, timing: input.timing, resultHash };
 }
 
 export function isMaterialChange(previous, current) {

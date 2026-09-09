@@ -44,7 +44,7 @@ export class DiagnosticWorker {
     this.clock = clock;
     this.notification = notification;
     this.render = render;
-    this.evaluator = typeof evaluator === "function" ? evaluator : (evidence) => evaluator.evaluate(evidence);
+    this.evaluator = typeof evaluator === "function" ? evaluator : (evidence, event) => evaluator.evaluate(evidence, event);
   }
 
   async runOnce() {
@@ -74,7 +74,7 @@ export class DiagnosticWorker {
     let timer;
     const deadline = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("diagnostic timeout")), this.timeoutMs); });
     const evidence = await Promise.race([this.collectEvidence(event), deadline]).finally(() => clearTimeout(timer));
-    const assessment = this.evaluator(evidence);
+    const assessment = this.evaluator(evidence, event);
     const partial = evidence.some((value) => value.status !== "collected");
     const actions = assessment.recommendedActions?.length
       ? assessment.recommendedActions
@@ -93,7 +93,18 @@ export class DiagnosticWorker {
   }
 
   resolvedResult(event, previous, started) {
-    const assessment = previous?.assessment ?? { ruleId: "TomcatDown", ruleVersion: "1", branch: "resolved_without_previous_firing", assessment: "Resolved without a stored firing diagnosis", classification: "undetermined", confidence: null };
+    const alertName = event?.labels?.alertname || previous?.assessment?.ruleId || "TomcatDown";
+    const assessment = previous?.assessment ? {
+      ...previous.assessment,
+      ruleId: previous.assessment.ruleId || alertName
+    } : {
+      ruleId: alertName,
+      ruleVersion: "1",
+      branch: "resolved_without_previous_firing",
+      assessment: "Resolved without a stored firing diagnosis",
+      classification: "undetermined",
+      confidence: null
+    };
     return buildCanonicalResult({
       diagnosticId: `diag-${event.eventKey}`,
       event,

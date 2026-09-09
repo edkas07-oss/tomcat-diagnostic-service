@@ -27,9 +27,15 @@
  */
 
 import { evaluateTomcatDown } from "./tomcat-down-engine.js";
+import { evaluateApplicationHealth } from "./application-health-engine.js";
+import { evaluateJvmWorkload } from "./jvm-workload-engine.js";
+import { evaluateConcurrency } from "./concurrency-engine.js";
 
 const BUILTIN_BRANCHES = new Set([
-  "TD-01", "TD-02", "TD-03", "TD-04", "TD-05", "TD-06", "TD-07", "TD-08"
+  "TD-01", "TD-02", "TD-03", "TD-04", "TD-05", "TD-06", "TD-07", "TD-08",
+  "AH-01", "AH-02", "AH-03", "AH-04", "AH-05",
+  "GC-01", "GC-02", "GC-03", "GC-04",
+  "TH-01", "TH-02", "TH-03"
 ]);
 
 export function isBuiltinBranch(branch) {
@@ -79,7 +85,8 @@ export class DynamicRuleEvaluator {
     return rule;
   }
 
-  evaluate(evidence) {
+  evaluate(evidence, event = {}) {
+    // 1. Layer 2: Custom Rules Ingestion
     for (const rule of this.rules) {
       const match = evidence.some((item) => {
         if (item.status !== "collected") return false;
@@ -94,7 +101,7 @@ export class DynamicRuleEvaluator {
 
       if (match) {
         return {
-          ruleId: rule.ruleId ?? "TomcatDown",
+          ruleId: event?.labels?.alertname || rule.ruleId || "TomcatDown",
           ruleVersion: rule.ruleVersion ?? "1",
           branch: rule.branch,
           category: rule.category ?? "general",
@@ -106,6 +113,46 @@ export class DynamicRuleEvaluator {
       }
     }
 
-    return evaluateTomcatDown(evidence);
+    // 2. Layer 1: Multi-Domain Decision Engines Dispatcher
+    const alertName = event?.labels?.alertname || "TomcatDown";
+
+    if (alertName === "TomcatDown") {
+      return evaluateTomcatDown(evidence, event);
+    }
+
+    if (
+      alertName === "TomcatApplicationHealthFailed" ||
+      alertName === "TelegrafHealthScrapeUnavailable" ||
+      alertName === "TomcatApplicationHealthMetricsMissing"
+    ) {
+      return evaluateApplicationHealth(evidence, event);
+    }
+
+    if (
+      alertName === "TomcatGCPauseHigh" ||
+      alertName === "TomcatGCOverheadHigh" ||
+      alertName === "TomcatOldGenMemoryPressure"
+    ) {
+      return evaluateJvmWorkload(evidence, event);
+    }
+
+    if (alertName === "TomcatThreadPoolSaturated") {
+      return evaluateConcurrency(evidence, event);
+    }
+
+    // Fallback for unexpected / generic alerts
+    return {
+      ruleId: alertName,
+      ruleVersion: "1",
+      branch: "UN-01",
+      category: "general",
+      assessment: `Alert received without specific registered domain rule evaluator: ${alertName}`,
+      classification: "undetermined",
+      confidence: null,
+      recommendedActions: [
+        "Periksa metrik telemetri runtime dan log aplikasi terkait alert tersebut.",
+        "Lakukan investigasi operasional manual sesuai SOP layanan Tomcat."
+      ]
+    };
   }
 }

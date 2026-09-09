@@ -94,6 +94,9 @@ required_files=(
     src/domain/canonical-result.js
     src/domain/rulepack-loader.js
     src/domain/tomcat-down-engine.js
+    src/domain/application-health-engine.js
+    src/domain/jvm-workload-engine.js
+    src/domain/concurrency-engine.js
     src/server/webhook-schema.js
     src/server/rulepack-schema.js
     src/server/http-service.js

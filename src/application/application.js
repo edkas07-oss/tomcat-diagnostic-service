@@ -127,7 +127,7 @@ export class DiagnosticApplication {
         this.worker = new DiagnosticWorker(this.repository, collectEvidence, {
           timeoutMs: this.config.timeouts.diagnosticMs,
           notification,
-          evaluator: (evidence) => this.ruleEvaluator.evaluate(evidence)
+          evaluator: (evidence, event) => this.ruleEvaluator.evaluate(evidence, event)
         });
       }
       

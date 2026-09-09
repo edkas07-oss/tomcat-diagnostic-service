@@ -49,10 +49,10 @@ function formatLogEvidence(evidenceList) {
 
 function formatUnavailableAndContradictions(result) {
   const unavailable = result.unavailableSources && result.unavailableSources.length > 0
-    ? result.unavailableSources.join(", ")
+    ? result.unavailableSources.map((item) => typeof item === "object" && item !== null ? `${item.source} (${item.status})` : String(item)).join(", ")
     : "Tidak ada (Semua sumber bukti yang relevan berhasil diperiksa)";
   const contradictions = result.contradictions && result.contradictions.length > 0
-    ? result.contradictions.join(", ")
+    ? result.contradictions.map((item) => typeof item === "object" && item !== null ? JSON.stringify(item) : String(item)).join(", ")
     : "Tidak ada (Tidak ditemukan bukti yang saling bertentangan)";
   return `Sumber yang Tidak Tersedia: ${unavailable}\nBukti yang Bertentangan: ${contradictions}`;
 }
@@ -110,10 +110,11 @@ function getRecommendedActions(result) {
 
 export function sections(result) {
   const isResolved = result.lifecycleStatus === "resolved";
+  const severity = (result.event?.labels?.severity || (result.ruleId === "TomcatDown" ? "critical" : "warning")).toUpperCase();
   const confidenceStr = result.assessment?.confidence ? `; confidence=${result.assessment.confidence}` : "";
 
   const alertSummary = [
-    `Nama Alert: ${result.ruleId} (Tingkat Keparahan: CRITICAL)`,
+    `Nama Alert: ${result.ruleId} (Tingkat Keparahan: ${severity})`,
     `Status Siklus: ${isResolved ? "RESOLVED (PULIH)" : "FIRING (AKTIF)"}`,
     `Target Identitas: ${result.targetId}`,
     `Fingerprint: ${result.fingerprint}`,
@@ -155,10 +156,11 @@ export function sections(result) {
 export function renderResult(result) {
   const content = sections(result);
   const isResolved = result.lifecycleStatus === "resolved";
-  const statusColor = isResolved ? "#2e7d32" : "#c62828";
-  const statusBg = isResolved ? "#e8f5e9" : "#ffebee";
-  const statusBorder = isResolved ? "#a5d6a7" : "#ef9a9a";
-  const headerTitle = isResolved ? "[ RESOLVED ] Tomcat Service Restored" : "[ CRITICAL ] Tomcat Monitoring Alert & Diagnostic Report";
+  const severity = (result.event?.labels?.severity || (result.ruleId === "TomcatDown" ? "critical" : "warning")).toUpperCase();
+  const statusColor = isResolved ? "#2e7d32" : (severity === "WARNING" ? "#e65100" : "#c62828");
+  const statusBg = isResolved ? "#e8f5e9" : (severity === "WARNING" ? "#fff3e0" : "#ffebee");
+  const statusBorder = isResolved ? "#a5d6a7" : (severity === "WARNING" ? "#ffcc80" : "#ef9a9a");
+  const headerTitle = isResolved ? "[ RESOLVED ] Tomcat Service Restored" : `[ ${severity} ] Tomcat Monitoring Alert & Diagnostic Report`;
 
   const textBody = content.map(([title, body]) => `=== ${title} ===\n${body}`).join("\n\n");
 
