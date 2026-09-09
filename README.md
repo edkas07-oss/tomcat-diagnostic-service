@@ -10,25 +10,21 @@ Layanan ini dirancang berdasarkan prinsip **Deterministic Honesty** dan **Human-
 
 1. **Durable Alert Ingestion & Queue:** Ingestion webhook Alertmanager v4 melalui HTTPS TLS dengan deduplikasi persisten dan antrean berkapasitas 50 event (TM-ADR-0015).
 2. **Target Isolation & Bounded Evidence Adapters:** Registri target terisolasi berbasis allowlist (`targets.json`), pengurungan path absolut ternormalisasi (anti-path traversal `../` dan anti-symlink), pembatasan kuota baca log (`catalina.out` maks 500 baris / 512 KiB) dengan sensor redaksi data sensitif (password/token/credential), pembatasan spool collector atomik (maks 200 berkas / 16 KiB per record), Prometheus API query (one-attempt timeout 5s), dan HTTPS application health probe (timeout 3s tanpa menyimpan response body).
-3. **Deterministic & Declarative Rulepack Engine:** Pohon keputusan deterministik 18 cabang:
-   - **8 Built-in Branches (`TD-01` s/d `TD-08`):**
-     - `TD-01`: *JMX/TLS Scrape Unavailable*
-     - `TD-02`: *Confirmed OOM Killer (Cgroup/Exit 137)*
-     - `TD-03`: *Correlated JVM Fatal Crash (`hs_err`)*
-     - `TD-04`: *Port Bind / Socket Conflict*
-     - `TD-05`: *Orderly Clean Shutdown*
-     - `TD-06`: *Uncorrelated Container Exit*
-     - `TD-07`: *Probable Unresponsive / Long Thread Pause*
-     - `TD-08`: *Contradicting / Undetermined State*
+3. **Deterministic Multi-Domain Diagnostic Engine & Dispatcher:** Arsitektur dispatcher modular berbasis Strategy Pattern yang mengevaluasi peringatan ke 4 engine domain resmi dengan total **20 Built-in Decision Branches** (TM-ADR-0023):
+   - **Tomcat Down Engine (`TD-01` s/d `TD-08`):** Scrape unavailable, Cgroup OOM killer (exit 137), Fatal JVM crash (`hs_err`), Port bind conflict, Clean shutdown, Uncorrelated container exit, Probable unresponsive pause, dan Undetermined state.
+   - **Application Health Engine (`AH-01` s/d `AH-05`):** Servlet HTTP 5xx errors, HTTP health check timeout, Health metrics missing, Database connectivity failure, dan Upstream dependency failure.
+   - **JVM Workload & Memory Engine (`GC-01` s/d `GC-04`):** GC pause duration high (> 1.5s), GC overhead / CPU thrashing (> 85%), Old Gen heap pressure (> 90%), dan Class metadata / Metaspace exhaustion.
+   - **Concurrency & Threading Engine (`TH-01` s/d `TH-03`):** Connector thread pool saturation (100% busy), Thread deadlock detected, dan High concurrency queue starvation.
    - **10 Curated Custom Branches (`TD-09` s/d `TD-18`):** Database pool exhaustion, Thread pool exhaustion, Heap OOM, Metaspace OOM, SSL Handshake failure, HikariCP timeout, Context init failure, Thread deadlock, Socket read timeout, dan SQL timeout.
 4. **Formal Rule Categorization (*Failure Domains*):** Pengelompokan aturan diagnosis berbasis 8 enum kategori resmi (`jvm_memory`, `concurrency_threading`, `database_persistence`, `network_integration`, `application_lifecycle`, `storage_os_limits`, `security_session`, `general`) pada skema JSON, SQLite, dan laporan email.
-5. **Safe Hot-Reload Rules API (`/api/v1/rules`):**
+5. **Rule ID Fidelity & Dynamic Severity:** Preservasi nama alert Prometheus asli secara transparan dan perenderan severity dinamis (`[WARNING]` / `[CRITICAL]`) pada subjek email serta laporan investigasi.
+6. **Safe Hot-Reload Rules API (`/api/v1/rules`):**
    - Ingestion aturan baru secara *live* tanpa *restart container* (*zero-downtime hot-reload*).
    - Ekspor dan filtering katalog aturan berbasis domain query parameter (`GET /api/v1/rules?category=<name>`).
    - Dilindungi oleh **5-Layer Ingestion Defense-in-Depth** (Auth Guard, Schema Guard, Collision Guard, Payload Size Guard, dan Append-Only Immutability Guard).
-6. **Resilient Notification Delivery & Lifecycle Orchestration:** Single worker loop dengan batasan deadline 60 detik, retry berbatas (*exponential backoff* 1s & 5s, maks 3 percobaan), proteksi *material update guard*, penekanan duplikasi identik (*identical-result suppression*), dan korelasi *resolved state* (TM-ADR-0016).
-7. **SQLite Persistence:** Migrasi schema forward-only (`001` s/d `006`), tabel `events`, `incidents`, `canonical_results`, `evidence_summaries`, `delivery_attempts`, `notification_attempts`, dan `custom_rules` (termasuk kolom `category`) berbasis `node:sqlite` (TM-ADR-0013).
-8. **Observability & Health Probing:** Endpoint `/health`, `/health/live`, `/health/ready`, dan `/metrics` (Prometheus text format).
+7. **Resilient Notification Delivery & Lifecycle Orchestration:** Single worker loop dengan batasan deadline 60 detik, retry berbatas (*exponential backoff* 1s & 5s, maks 3 percobaan), proteksi *material update guard*, penekanan duplikasi identik (*identical-result suppression*), dan korelasi *resolved state* (TM-ADR-0016).
+8. **SQLite Persistence:** Migrasi schema forward-only (`001` s/d `006`), tabel `events`, `incidents`, `canonical_results`, `evidence_summaries`, `delivery_attempts`, `notification_attempts`, dan `custom_rules` (termasuk kolom `category`) berbasis `node:sqlite` (TM-ADR-0013).
+9. **Observability & Health Probing:** Endpoint `/health`, `/health/live`, `/health/ready`, dan `/metrics` (Prometheus text format).
 
 ---
 
@@ -53,8 +49,8 @@ Sistem mengadopsi taksonomi **8 Kategori Domain Kegagalan** untuk menstrukturkan
 
 Laporan diagnosis insiden diterbitkan dalam format *HTML multi-part* dan *Plain Text* terstruktur 7 seksi kanonikal (TN-007):
 
-1. **Section 1: Incident Header & Target Context** — Identitas insiden, nama alert (`alertname`), target instance (`environment`, `host`, `tomcat_instance`), status alert (`FIRING` / `RESOLVED`), dan stempel waktu UTC/lokal.
-2. **Section 2: Primary Root Cause & Decision Branch** — Klasifikasi cabang keputusan deterministik (`TD-01` s/d `TD-18` atau custom rulepack) beserta deskripsi ringkas akar masalah.
+1. **Section 1: Incident Header & Target Context** — Identitas insiden, nama alert asli (*Rule ID Fidelity* / `alertname`), tingkat keparahan dinamis (`[WARNING]` / `[CRITICAL]`), target instance (`environment`, `host`, `tomcat_instance`), status alert (`FIRING` / `RESOLVED`), dan stempel waktu UTC/lokal.
+2. **Section 2: Primary Root Cause & Decision Branch** — Klasifikasi cabang keputusan deterministik (`TD-xx`, `AH-xx`, `GC-xx`, `TH-xx`, atau custom rulepack) beserta deskripsi ringkas akar masalah.
 3. **Section 3: Failure Domain Classification** — Klasifikasi kategori domain kegagalan resmi (`jvm_memory`, `database_persistence`, dll.) untuk memandu eskalasi on-call.
 4. **Section 4: Diagnostic Confidence Score & Evaluation Matrix** — Tingkat kepastian hasil diagnosis (`HIGH`, `MEDIUM`, `LOW`) berdasarkan kelengkapan bukti pendukung.
 5. **Section 5: Correlated Evidence Summary** — Ringkasan bukti terkorelasi:
@@ -213,7 +209,7 @@ podman run --detach --pull=never \
     --volume "/tmp/diagnostic-spool:/run/tomcat-diagnostic/spool:ro,z" \
     --volume "/tmp/tomcat-logs:/run/tomcat-diagnostic/logs:ro,z" \
     --volume "diagnostic_data:/var/lib/tomcat-diagnostic:z" \
-    localhost/tomcat-diagnostic-service:0.1.4
+    localhost/tomcat-diagnostic-service:0.1.5
 ```
 
 ---
@@ -224,7 +220,7 @@ podman run --detach --pull=never \
 - **Header Wajib:** `Authorization: Bearer <token>`
 
 | Method | Endpoint | Deskripsi | Status Code |
-| :---: | :--- | :--- | :---: |
+| :---: | :--- | :--- | :--- | :---: |
 | `POST` | `/api/v1/rules` | Ingest Declarative Rulepack baru (Hot-Reload) | `201 Created` / `400` / `401` / `409` / `413` |
 | `GET` | `/api/v1/rules` | Ekspor seluruh katalog aturan aktif di sistem | `200 OK` / `401 Unauthorized` |
 | `GET` | `/api/v1/rules?category=<name>` | Ekspor aturan spesifik berdasarkan domain kategori | `200 OK` / `401 Unauthorized` |
@@ -251,6 +247,8 @@ podman run --detach --pull=never \
   - [TM-ADR-0019](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0019.md) — *Adopt AI-Augmented Knowledge Enrichment Workflow with Human-in-the-Loop Governance*
   - [TM-ADR-0020](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0020.md) — *Adopt Diagnostic Service Self-Monitoring and Emergency Fallback Routing*
   - [TM-ADR-0021](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0021.md) — *Adopt Layered Failure Resilience, Container Auto-Healing, and Monitoring Domain Separation*
+  - [TM-ADR-0022](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0022.md) — *Adopt Multi-Tier Dynamic Diagnostic Routing Architecture*
+  - [TM-ADR-0023](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0023.md) — *Adopt Multi-Domain Diagnostic Dispatcher and Mandatory Per-Alert Decision Engine Governance*
 
 ---
 
@@ -264,7 +262,7 @@ tomcat-diagnostic-service/
 ├── LICENSE            Lisensi eksklusif kepemilikan (Proprietary & Confidential)
 ├── PROJECT            Identitas project yang dapat dibaca script
 ├── README.md          Spesifikasi kontrak dan status implementasi
-├── VERSION            Versi rilis aplikasi (saat ini: 0.1.4)
+├── VERSION            Versi rilis aplikasi (saat ini: 0.1.5)
 ├── package.json       Kontrak package ESM dan dependency lock
 ├── package-lock.json  Dependency lock
 ├── config/schemas/    Versioned JSON Schemas:
@@ -281,9 +279,9 @@ tomcat-diagnostic-service/
 ├── src/               Kode sumber aplikasi:
 │   ├── adapters/      SQLite repository, SMTP sender, & Evidence collectors
 │   ├── application/   Diagnostic worker, Result renderer, Target registry, & Notification orchestrator
-│   ├── domain/        Deterministic engine, Rulepack loader, & Dynamic evaluator
+│   ├── domain/        Multi-Domain Dispatcher, 4 Domain Decision Engines, Rulepack loader, & Dynamic evaluator
 │   └── server/        HTTPS server, Authentication, Routes, & Schema validators
-├── test/              Unit dan temporary-SQLite integration test suites (47 unit tests)
+├── test/              Unit dan temporary-SQLite integration test suites (54 unit tests)
 └── scripts/
     ├── build.sh       Build versioned dan latest local image
     ├── test-image.sh  Static runtime & container image contract probes
@@ -300,7 +298,7 @@ tomcat-diagnostic-service/
 PATH="$PATH:/home/eddywiyatno/.cache/opencode/bin" ./scripts/validate.sh
 ```
 
-### 2. Unit & Integration Tests (47 Tests)
+### 2. Unit & Integration Tests (54 Tests)
 ```bash
 podman run --rm --userns=keep-id -v $(pwd):/app:Z -w /app localhost/nodejs:24.18.0 npm test
 ```
@@ -321,14 +319,14 @@ podman run --rm --userns=keep-id -v $(pwd):/app:Z -w /app localhost/nodejs:24.18
 | **Alertmanager Ingestion & Queue** | ✅ Selesai | Webhook v4, deduplikasi, kapasitas 50 |
 | **Target Isolation & Evidence Adapters**| ✅ Selesai | Allowlist targets, anti-traversal, bounded log/spool |
 | **SQLite Persistence & Migrations** | ✅ Selesai | 6 migration files, zero-data loss |
-| **Decision Engine (TD-01..TD-08)** | ✅ Selesai | Deterministic honesty, 7-section reports |
+| **Multi-Domain Dispatcher & Decision Engines** | ✅ Selesai | 20 built-in branches (`TD`, `AH`, `GC`, `TH`), TM-ADR-0023 |
 | **Custom Rule Engine (TD-09..TD-18)**| ✅ Selesai | Dynamic rulepack evaluation & hot-reloading |
 | **Rule Categorization Engine** | ✅ Selesai | 8 failure domain enums, filtering API, email label |
 | **Rules API & 5-Layer Defense** | ✅ Selesai | Auth, schema, collision, size, immutability |
 | **Notification Lifecycle & Bounded Retry**| ✅ Selesai | Exponential retry, suppression, material update guard |
 | **SMTP Delivery & Resolved Correlation**| ✅ Selesai | Clean HTML/Text 7-section reports, Mailpit integration |
-| **Persistent Lab Deployment** | ✅ Selesai | Aktif di `devops-lab` container network |
-| **Automated Verification Suites** | ✅ Selesai | 100% lulus pada 47 unit test & end-to-end suites |
+| **Persistent Lab Deployment** | ✅ Selesai | Aktif di `devops-lab` container network (v0.1.5) |
+| **Automated Verification Suites** | ✅ Selesai | 100% lulus pada 54 unit test & end-to-end suites |
 
 ---
 

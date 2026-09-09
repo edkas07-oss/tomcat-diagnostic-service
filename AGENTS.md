@@ -4,9 +4,7 @@
 
 Repository ini memiliki source aplikasi, dependency lock, image lifecycle,
 migration, dan component test Diagnostic Service untuk Tomcat Monitoring.
-Service menerima alert `TomcatDown`, menyimpan state secara durable, membentuk
-diagnosis deterministik dari evidence yang dibatasi, dan menghasilkan
-notification content tanpa melakukan automatic remediation.
+Service menerima alert observabilitas operasional Tomcat (`TomcatDown`, Application Health, JVM GC/Memory, Concurrency Threading), mendistribusikan evaluasi melalui Multi-Domain Diagnostic Dispatcher, menyimpan state secara durable, membentuk diagnosis deterministik dari evidence yang dibatasi, dan menghasilkan notification content tanpa melakukan automatic remediation (TM-ADR-0014, TM-ADR-0023).
 
 ## Source of Truth
 
