@@ -31,6 +31,30 @@ test("normalizes a valid TomcatDown firing event deterministically", () => {
   assert.equal(first.alerts[0].eventTime, "2026-08-31T01:00:00.000Z");
 });
 
+test("normalizes universal monitoring alerts (TomcatGCPauseHigh) deterministically", () => {
+  const payload = webhook({
+    groupKey: "{}:{alertname=\"TomcatGCPauseHigh\"}",
+    alert: {
+      labels: {
+        alertname: "TomcatGCPauseHigh",
+        severity: "warning",
+        environment: "lab",
+        host: "tomcat-01",
+        tomcat_instance: "default",
+        job: "tomcat-jmx-exporter",
+        instance: "tomcat-01:9404",
+        service: "tomcat",
+        check: "jvm-gc-latency"
+      },
+      annotations: { summary: "Tomcat JVM GC pause is excessively high" }
+    }
+  });
+  const normalized = normalizeWebhook(payload, options);
+  assert.equal(normalized.alerts[0].labels.alertname, "TomcatGCPauseHigh");
+  assert.equal(normalized.alerts[0].labels.severity, "warning");
+  assert.equal(normalized.alerts[0].labels.check, "jvm-gc-latency");
+});
+
 test("rejects an identity outside the local allowlist", () => {
   const payload = webhook({ alert: { labels: { ...webhook().alerts[0].labels, host: "unapproved" } } });
   assert.throws(() => normalizeWebhook(payload, options), IngestionValidationError);

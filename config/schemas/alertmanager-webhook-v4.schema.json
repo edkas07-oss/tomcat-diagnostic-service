@@ -23,15 +23,15 @@
             "additionalProperties": { "type": "string" },
             "required": ["alertname", "severity", "environment", "host", "tomcat_instance", "job", "instance", "service", "check"],
             "properties": {
-              "alertname": { "const": "TomcatDown" },
-              "severity": { "const": "critical" },
+              "alertname": { "type": "string", "minLength": 1 },
+              "severity": { "enum": ["critical", "warning", "info"] },
               "environment": { "type": "string", "minLength": 1 },
               "host": { "type": "string", "minLength": 1 },
               "tomcat_instance": { "type": "string", "minLength": 1 },
-              "job": { "const": "tomcat-jmx-exporter" },
+              "job": { "type": "string", "minLength": 1 },
               "instance": { "type": "string", "minLength": 1 },
-              "service": { "const": "tomcat" },
-              "check": { "const": "runtime-availability" },
+              "service": { "type": "string", "minLength": 1 },
+              "check": { "type": "string", "minLength": 1 },
               "application": { "type": "string", "minLength": 1 }
             }
           },
