@@ -12,3 +12,7 @@ MODULE_TYPE=module
 IMAGE_NAME=localhost/tomcat-diagnostic-service
 BASE_IMAGE=localhost/nodejs@sha256:76b1444d507be3398f3196f37bd20f7a97a703871ed2716fa91a1a9520fc482d
 BASE_IMAGE_ID=bccb45bc1e48a07ac6c2cd36f7352bccb555e8b3e6070cbefa727d83d6dee3bc
+
+# Nilai bawaan storage volume runtime lokal
+DATA_VOLUME=diagnostic_data
+LOG_VOLUME=tomcat_logs
