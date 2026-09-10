@@ -130,7 +130,26 @@ Layanan menerapkan mesin status (*state machine*) orkestrasi notifikasi kanonika
 
 ## ⚙️ Kontrak Konfigurasi & Runtime Parameters
 
-Layanan membaca konfigurasi JSON valid sesuai skema `config/schemas/application-config-v1.schema.json` (TN-008, TN-009):
+### Konfigurasi Baseline & Metadata (`CONFIG`)
+
+Repository ini menggunakan berkas `CONFIG` sebagai deklarasi konfigurasi kanonikal non-secret untuk toolchain, base image, dan volume penyimpanan persisten:
+
+```bash
+# Toolchain aplikasi (TM-ADR-0013)
+NODE_VERSION=24.18.0
+MODULE_TYPE=module
+
+# Identitas application image dan immutable local base (TN-010)
+IMAGE_NAME=localhost/tomcat-diagnostic-service
+BASE_IMAGE=localhost/nodejs@sha256:76b1444d507be3398f3196f37bd20f7a97a703871ed2716fa91a1a9520fc482d
+BASE_IMAGE_ID=bccb45bc1e48a07ac6c2cd36f7352bccb555e8b3e6070cbefa727d83d6dee3bc
+
+# Nilai bawaan storage volume runtime lokal
+DATA_VOLUME=diagnostic_data
+LOG_VOLUME=tomcat_logs
+```
+
+Parameter `DATA_VOLUME` dan `LOG_VOLUME` memastikan seluruh state SQLite dan pembacaan bukti log Tomcat beroperasi di atas Podman Named Volume persisten yang terisolasi dan dapat dikonfigurasi melalui environment variable.
 
 ### Parameter Konfigurasi (`application.json`)
 
@@ -188,8 +207,12 @@ Standar tata letak mount path kontainer pada lingkungan lab dan produksi persist
 | `/run/tomcat-diagnostic/tls/server.crt` | Bind File | `ro` (`0444`) | Sertifikat TLS internal server |
 | `/run/tomcat-diagnostic/tls/server.key` | Bind File | `ro` (`0400`) | Private key TLS internal server |
 | `/run/tomcat-diagnostic/spool` | Bind Dir | `ro,z` | Direktori pembacaan snapshot Restricted Collector |
-| `/run/tomcat-diagnostic/logs` | Bind Dir | `ro,z` | Direktori pembacaan log `catalina.out` target |
-| `/var/lib/tomcat-diagnostic` | Named Vol | `rw,z` | Volume persisten SQLite `diagnostic_data` (`diagnostic.db`, mode `0600`) |
+| `/run/tomcat-diagnostic/logs` | Named Vol | `ro,z` | Volume persisten log Tomcat (`tomcat_logs`) dibaca secara read-only untuk korelasi bukti `catalina.out` (dideklarasikan di `CONFIG`) |
+| `/var/lib/tomcat-diagnostic` | Named Vol | `rw,z` | Volume persisten SQLite `diagnostic_data` (`diagnostic.db`, mode `0600`, dideklarasikan di `CONFIG`) |
+
+### Kebijakan Persistensi Data & Isolasi (Zero `/tmp`)
+- **Persistent Evidence & State:** Log Tomcat dibaca langsung dari Podman Named Volume `tomcat_logs` (`ro,z`) dan database SQLite disimpan di Named Volume `diagnostic_data` (`rw,z`). Tidak menggunakan direktori volatil `/tmp` agar data diagnosa dan log audit tetap persisten saat container/server direstart.
+- **Configurable Storage:** Nama volume default dideklarasikan di `CONFIG` dan script deployment mendukung dynamic override melalui environment variable `DATA_VOLUME` dan `LOG_VOLUME`.
 
 ### Contoh Perintah Deployment Podman Persisten (TN-015)
 
