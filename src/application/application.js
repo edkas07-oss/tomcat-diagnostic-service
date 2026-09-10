@@ -103,7 +103,13 @@ export function createDefaultEvidenceCollector(targetRegistry, { prometheusAdapt
       } catch {}
     }
     if (target.logDirectory) {
-      evidence.push(collectLocalFileEvidence(target, context, { rootField: "logDirectory", relativePath: "catalina.out", type: "orderly_shutdown" }));
+      let logEv = collectLocalFileEvidence(target, context, { rootField: "logDirectory", relativePath: "catalina.out", type: "orderly_shutdown" });
+      if (logEv.status === "not_found") {
+        const dateStr = observedAt.slice(0, 10);
+        const dailyLogEv = collectLocalFileEvidence(target, context, { rootField: "logDirectory", relativePath: `catalina.${dateStr}.log`, type: "orderly_shutdown" });
+        if (dailyLogEv.status === "collected") logEv = dailyLogEv;
+      }
+      evidence.push(logEv);
     }
     if (target.applicationHealthUrl) {
       evidence.push(await collectApplicationHealth(target, context));
