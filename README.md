@@ -205,9 +205,7 @@ podman run --detach --pull=never \
     --volume "/path/to/targets.json:/run/tomcat-diagnostic/config/targets.json:ro,z" \
     --volume "/path/to/bearer-token:/run/tomcat-diagnostic/secrets/bearer-token:ro,z" \
     --volume "/path/to/server.crt:/run/tomcat-diagnostic/tls/server.crt:ro,z" \
-    --volume "/path/to/server.key:/run/tomcat-diagnostic/tls/server.key:ro,z" \
-    --volume "/tmp/diagnostic-spool:/run/tomcat-diagnostic/spool:ro,z" \
-    --volume "${HOME}/.local/share/tomcat-monitoring/logs:/run/tomcat-diagnostic/logs:ro,z" \
+    --volume "tomcat_logs:/run/tomcat-diagnostic/logs:ro,z" \
     --volume "diagnostic_data:/var/lib/tomcat-diagnostic:z" \
     localhost/tomcat-diagnostic-service:0.1.7
 ```
