@@ -23,8 +23,8 @@ Layanan ini dirancang berdasarkan prinsip **Deterministic Honesty** dan **Human-
    - Ekspor dan filtering katalog aturan berbasis domain query parameter (`GET /api/v1/rules?category=<name>`).
    - Dilindungi oleh **5-Layer Ingestion Defense-in-Depth** (Auth Guard, Schema Guard, Collision Guard, Payload Size Guard, dan Append-Only Immutability Guard).
 7. **Resilient Notification Delivery & Lifecycle Orchestration:** Single worker loop dengan batasan deadline 60 detik, retry berbatas (*exponential backoff* 1s & 5s, maks 3 percobaan), proteksi *material update guard*, penekanan duplikasi identik (*identical-result suppression*), dan korelasi *resolved state* (TM-ADR-0016).
-8. **SQLite Persistence:** Migrasi schema forward-only (`001` s/d `006`), tabel `events`, `incidents`, `canonical_results`, `evidence_summaries`, `delivery_attempts`, `notification_attempts`, dan `custom_rules` (termasuk kolom `category`) berbasis `node:sqlite` (TM-ADR-0013).
-9. **Observability & Health Probing:** Endpoint `/health`, `/health/live`, `/health/ready`, dan `/metrics` (Prometheus text format).
+8. **SQLite Persistence & State Resilience:** Migrasi schema forward-only (`001` s/d `007`), tabel `events`, `incidents`, `canonical_results`, `evidence_summaries`, `delivery_attempts`, `notification_attempts`, dan `custom_rules`, dilengkapi mekanisme **Stale Lock Recovery** (pemulihan otomatis antrean terinterupsi pasca-restart), **Bounded Retries** (pencegahan crash loop), serta **Foreign-Key Safe Retention Pruning & Incremental Vacuum** (TM-ADR-0013, TM-ADR-0015, TN-007).
+9. **Observability & Health Probing:** Endpoint `/health`, `/health/live`, `/health/ready`, dan `/metrics` (Prometheus text format) mengekspos metrik liveness, antrean, kegagalan worker, stale locks recovered/exhausted, siklus housekeeping, dan ukuran database (`diagnostic_db_size_bytes`).
 
 ---
 

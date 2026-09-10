@@ -1,6 +1,6 @@
 {
   "name": "tomcat-diagnostic-service",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "Bounded deterministic diagnostic service for the Tomcat Monitoring pilot",
   "author": "Eddy Wiyatno <edkas07@gmail.com>",

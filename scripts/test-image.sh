@@ -57,6 +57,8 @@ podman run --rm "${image}" sh -eu -c '
     test -f migrations/003-delivery-attempts.sql
     test -f migrations/004-notification-lifecycle.sql
     test -f migrations/005-custom-rules.sql
+    test -f migrations/006-rule-category.sql
+    test -f migrations/007-stale-lock-recovery-and-retention.sql
     test ! -e test
     test ! -e CONFIG
     test ! -e README.md

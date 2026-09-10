@@ -112,6 +112,26 @@ export class DiagnosticApplication {
     try {
       const projectRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
       this.repository = this.dependencies.repository ?? new SqliteRepository(this.config.databasePath, { migrationsDirectory: join(projectRoot, "migrations") });
+      const staleTimeoutMs = this.config.queue?.staleLockTimeoutMs ?? 300000;
+      const maxRetries = this.config.queue?.maxRetries ?? 3;
+      const retentionDays = this.config.queue?.retentionDays ?? 30;
+
+      if (typeof this.repository.recoverStaleLocks === "function") {
+        const recovery = this.repository.recoverStaleLocks({ timeoutMs: staleTimeoutMs, maxRetries });
+        if (recovery.recoveredCount > 0) this.health.increment("diagnostic_stale_locks_recovered_total", {}, recovery.recoveredCount);
+        if (recovery.exhaustedCount > 0) this.health.increment("diagnostic_stale_locks_exhausted_total", {}, recovery.exhaustedCount);
+      }
+
+      if (typeof this.repository.pruneHistoricalRecords === "function") {
+        const pruning = this.repository.pruneHistoricalRecords({ retentionDays });
+        if (pruning.prunedEvents > 0) this.health.increment("diagnostic_records_pruned_total", { table: "events" }, pruning.prunedEvents);
+        this.health.increment("diagnostic_housekeeping_runs_total");
+      }
+
+      if (typeof this.repository.getDatabaseSizeBytes === "function") {
+        this.health.setGauge("diagnostic_db_size_bytes", this.repository.getDatabaseSizeBytes());
+      }
+
       const initialRules = typeof this.repository.listCustomRules === "function" ? this.repository.listCustomRules() : [];
       this.ruleEvaluator = this.dependencies.ruleEvaluator ?? new DynamicRuleEvaluator(initialRules);
       const rulesValidator = this.dependencies.rulesValidator ?? createRulepackValidator(join(projectRoot, "config/schemas/rulepack-v1.schema.json"));
@@ -156,8 +176,43 @@ export class DiagnosticApplication {
   }
 
   async runWorkerLoop() {
+    const staleIntervalMs = (this.config.queue?.staleLockTimeoutMs ?? 300000) / 2;
+    const housekeepingIntervalMs = this.config.queue?.housekeepingIntervalMs ?? 3600000;
+    let lastStaleCheckAt = Date.now();
+    let lastHousekeepingAt = Date.now();
+
     while (!this.stopping) {
       try {
+        const now = Date.now();
+        if (now - lastStaleCheckAt >= staleIntervalMs) {
+          lastStaleCheckAt = now;
+          if (typeof this.repository.recoverStaleLocks === "function") {
+            const recovery = this.repository.recoverStaleLocks({
+              timeoutMs: this.config.queue?.staleLockTimeoutMs ?? 300000,
+              maxRetries: this.config.queue?.maxRetries ?? 3
+            });
+            if (recovery.recoveredCount > 0) this.health.increment("diagnostic_stale_locks_recovered_total", {}, recovery.recoveredCount);
+            if (recovery.exhaustedCount > 0) this.health.increment("diagnostic_stale_locks_exhausted_total", {}, recovery.exhaustedCount);
+          }
+          if (typeof this.repository.getDatabaseSizeBytes === "function") {
+            this.health.setGauge("diagnostic_db_size_bytes", this.repository.getDatabaseSizeBytes());
+          }
+        }
+
+        if (now - lastHousekeepingAt >= housekeepingIntervalMs) {
+          lastHousekeepingAt = now;
+          if (typeof this.repository.pruneHistoricalRecords === "function") {
+            const pruning = this.repository.pruneHistoricalRecords({
+              retentionDays: this.config.queue?.retentionDays ?? 30
+            });
+            if (pruning.prunedEvents > 0) this.health.increment("diagnostic_records_pruned_total", { table: "events" }, pruning.prunedEvents);
+            this.health.increment("diagnostic_housekeeping_runs_total");
+          }
+          if (typeof this.repository.getDatabaseSizeBytes === "function") {
+            this.health.setGauge("diagnostic_db_size_bytes", this.repository.getDatabaseSizeBytes());
+          }
+        }
+
         const result = await this.worker.runOnce();
         if (!result) await new Promise((resolvePoll) => {
           this.resolvePoll = resolvePoll;

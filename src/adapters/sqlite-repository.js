@@ -24,11 +24,14 @@
  *       - Jika baru: simpan ke tabel `events`, periksa kapasitas antrean `work_queue` (< queueCapacity); jika penuh lempar QueueCapacityError.
  *       - Masukkan entri tugas baru berstatus `queued` ke tabel `work_queue`.
  *    d. Commit transaksi dan kembalikan `{ accepted, duplicate }`.
- * 4. Metoda Manajemen Antrean, Hasil Kanonikal, Pengiriman Notifikasi, dan Custom Rules:
- *    - `claimWorkItem()`: Klaim item tertua secara atomik (`state = 'processing'`).
- *    - `completeWorkItem()`: Tandai antrean `completed` atau `failed`.
+ * 4. Metoda Manajemen Antrean, Hasil Kanonikal, Pengiriman Notifikasi, State Resilience, dan Custom Rules:
+ *    - `claimNext()`: Klaim item tertua secara atomik (`state = 'processing'`, catat lease_expires_at).
+ *    - `complete()`: Tandai antrean `completed` atau `failed` dan bersihkan lease.
+ *    - `recoverStaleLocks()`: Kembalikan event macet berstatus 'processing' ke 'queued' atau tandai 'failed' jika batas retry habis.
+ *    - `pruneHistoricalRecords()`: Bersihkan data historis melebihi batas retensi dalam urutan foreign key dan lakukan incremental vacuum.
+ *    - `getDatabaseSizeBytes()`: Dapatkan ukuran aktual file database SQLite dalam bytes.
  *    - `saveCanonicalResult()`: Simpan hasil diagnosis kanonikal dan ringkasan bukti telemetri.
- *    - `reserveMaterialUpdateSlot()`: Guard pembaruan materiil insiden (maks 1 kali pembaruan firing).
+ *    - `reserveMaterialUpdate()`: Guard pembaruan materiil insiden (maks 1 kali pembaruan firing).
  *    - `recordNotificationAttempt()`: Simpan riwayat percobaan pengiriman SMTP (attempt 1..3).
  *    - `saveCustomRule()` / `getAllCustomRules()`: Simpan dan baca aturan deklaratif dengan proteksi anti-collision.
  *
@@ -137,11 +140,16 @@ export class SqliteRepository {
     }
   }
 
-  claimNext() {
+  claimNext({ timeoutMs = 300000, now = new Date() } = {}) {
     try {
       this.database.exec("BEGIN IMMEDIATE");
-      const item = this.database.prepare("SELECT id, event_id FROM work_queue WHERE state = 'queued' ORDER BY id LIMIT 1").get();
-      if (item) this.database.prepare("UPDATE work_queue SET state = 'processing', started_at = ? WHERE id = ?").run(new Date().toISOString(), item.id);
+      const item = this.database.prepare("SELECT id, event_id, retry_count FROM work_queue WHERE state = 'queued' ORDER BY id LIMIT 1").get();
+      if (item) {
+        const startedAt = now.toISOString();
+        const leaseExpiresAt = new Date(now.getTime() + timeoutMs).toISOString();
+        this.database.prepare("UPDATE work_queue SET state = 'processing', started_at = ?, lease_expires_at = ? WHERE id = ?")
+          .run(startedAt, leaseExpiresAt, item.id);
+      }
       this.database.exec("COMMIT");
       return item ?? null;
     } catch (error) {
@@ -151,8 +159,88 @@ export class SqliteRepository {
   }
 
   complete(queueId, succeeded = true) {
-    this.database.prepare("UPDATE work_queue SET state = ?, completed_at = ? WHERE id = ? AND state = 'processing'")
+    this.database.prepare("UPDATE work_queue SET state = ?, completed_at = ?, lease_expires_at = NULL WHERE id = ? AND state = 'processing'")
       .run(succeeded ? "completed" : "failed", new Date().toISOString(), queueId);
+  }
+
+  recoverStaleLocks({ timeoutMs = 300000, maxRetries = 3, now = new Date() } = {}) {
+    try {
+      this.database.exec("BEGIN IMMEDIATE");
+      const cutoff = new Date(now.getTime() - timeoutMs).toISOString();
+      const staleItems = this.database.prepare(
+        "SELECT id, event_id, retry_count FROM work_queue WHERE state = 'processing' AND (started_at IS NULL OR started_at <= ? OR lease_expires_at <= ?)"
+      ).all(cutoff, now.toISOString());
+      let recoveredCount = 0;
+      let exhaustedCount = 0;
+      for (const item of staleItems) {
+        if (item.retry_count < maxRetries) {
+          this.database.prepare(
+            "UPDATE work_queue SET state = 'queued', started_at = NULL, lease_expires_at = NULL, retry_count = retry_count + 1 WHERE id = ?"
+          ).run(item.id);
+          recoveredCount++;
+        } else {
+          this.database.prepare(
+            "UPDATE work_queue SET state = 'failed', completed_at = ?, lease_expires_at = NULL WHERE id = ?"
+          ).run(now.toISOString(), item.id);
+          exhaustedCount++;
+        }
+      }
+      this.database.exec("COMMIT");
+      return { recoveredCount, exhaustedCount };
+    } catch (error) {
+      try { this.database.exec("ROLLBACK"); } catch {}
+      throw error;
+    }
+  }
+
+  pruneHistoricalRecords({ retentionDays = 30, now = new Date() } = {}) {
+    try {
+      this.database.exec("BEGIN IMMEDIATE");
+      const cutoff = new Date(now.getTime() - retentionDays * 86400000).toISOString();
+      this.database.prepare(`
+        DELETE FROM evidence_summaries WHERE result_id IN (
+          SELECT id FROM canonical_results WHERE created_at < ?
+        )
+      `).run(cutoff);
+      this.database.prepare(`
+        DELETE FROM notification_attempts WHERE result_id IN (
+          SELECT id FROM canonical_results WHERE created_at < ?
+        )
+      `).run(cutoff);
+      const resultsDeleted = this.database.prepare("DELETE FROM canonical_results WHERE created_at < ?").run(cutoff);
+      this.database.prepare(`
+        DELETE FROM work_queue WHERE event_id IN (
+          SELECT id FROM events WHERE accepted_at < ?
+        )
+      `).run(cutoff);
+      const eventsDeleted = this.database.prepare("DELETE FROM events WHERE accepted_at < ?").run(cutoff);
+      const requestsDeleted = this.database.prepare(`
+        DELETE FROM requests WHERE accepted_at < ? AND id NOT IN (SELECT request_id FROM events)
+      `).run(cutoff);
+      const incidentsDeleted = this.database.prepare(`
+        DELETE FROM incidents WHERE state = 'resolved' AND updated_at < ? AND fingerprint NOT IN (SELECT fingerprint FROM events)
+      `).run(cutoff);
+      this.database.exec("COMMIT");
+      try { this.database.exec("PRAGMA incremental_vacuum;"); } catch {}
+      return {
+        prunedResults: Number(resultsDeleted.changes),
+        prunedEvents: Number(eventsDeleted.changes),
+        prunedRequests: Number(requestsDeleted.changes),
+        prunedIncidents: Number(incidentsDeleted.changes)
+      };
+    } catch (error) {
+      try { this.database.exec("ROLLBACK"); } catch {}
+      throw error;
+    }
+  }
+
+  getDatabaseSizeBytes() {
+    try {
+      const row = this.database.prepare("SELECT page_count * page_size AS size FROM pragma_page_count(), pragma_page_size()").get();
+      return Number(row?.size ?? 0);
+    } catch {
+      return 0;
+    }
   }
 
   eventForQueue(queueId) {

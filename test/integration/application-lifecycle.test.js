@@ -55,3 +55,26 @@ test("one worker loop stops before database close during graceful shutdown", asy
   assert.equal(calls, 1);
   assert.deepEqual(events, ["worker-idle", "acceptance-stopped", "database-closed"]);
 });
+
+test("startup lifecycle invokes stale lock recovery and updates db metrics", async () => {
+  const events = [];
+  const repository = {
+    close: () => events.push("database-closed"),
+    recoverStaleLocks: () => { events.push("recover-stale"); return { recoveredCount: 2, exhaustedCount: 1 }; },
+    pruneHistoricalRecords: () => { events.push("prune-records"); return { prunedEvents: 5 }; },
+    getDatabaseSizeBytes: () => 40960
+  };
+  const worker = { async runOnce() { return null; } };
+  const application = new DiagnosticApplication(config(), { repository, queue: {}, webhookValidator: () => true, worker, server: new FakeServer(events) });
+  await application.start();
+  
+  const snapshot = application.health.snapshot();
+  assert.equal(snapshot.counters['diagnostic_stale_locks_recovered_total:{}'], 2);
+  assert.equal(snapshot.counters['diagnostic_stale_locks_exhausted_total:{}'], 1);
+  assert.equal(snapshot.counters['diagnostic_records_pruned_total:{"table":"events"}'], 5);
+  assert.equal(snapshot.counters['diagnostic_housekeeping_runs_total:{}'], 1);
+  assert.equal(snapshot.gauges['diagnostic_db_size_bytes'], 40960);
+  assert.deepEqual(events, ["recover-stale", "prune-records"]);
+  
+  await application.shutdown();
+});

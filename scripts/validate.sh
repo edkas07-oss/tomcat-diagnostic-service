@@ -74,6 +74,7 @@ required_files=(
     migrations/004-notification-lifecycle.sql
     migrations/005-custom-rules.sql
     migrations/006-rule-category.sql
+    migrations/007-stale-lock-recovery-and-retention.sql
     src/adapters/application-health-adapter.js
     src/adapters/bounded-file-reader.js
     src/adapters/collector-spool-adapter.js
