@@ -43,7 +43,8 @@ function fixture(overrides = {}) {
 test("loads versioned non-secret configuration and mounted files", () => {
   const { configPath } = fixture({
     prometheus: { baseUrl: "http://prometheus.local:9090" },
-    timeouts: { diagnosticMs: 1000, smtpMs: 1000, shutdownMs: 1000, prometheusMs: 5000 }
+    timeouts: { diagnosticMs: 1000, smtpMs: 1000, shutdownMs: 1000, prometheusMs: 5000 },
+    smtp: { host: "127.0.0.1", port: 2525, secure: false, requireTLS: true, from: "diagnostic@example.invalid", to: "operator@example.invalid" }
   });
   const loaded = loadApplicationConfig(configPath, { schemaPath: resolve("config/schemas/application-config-v1.schema.json") });
   assert.equal(loaded.schemaVersion, 1);
@@ -52,6 +53,7 @@ test("loads versioned non-secret configuration and mounted files", () => {
   assert.equal(loaded.targetRegistry.require("lab/tomcat-01/default").identity.host, "tomcat-01");
   assert.equal(loaded.prometheus.baseUrl, "http://prometheus.local:9090");
   assert.equal(loaded.timeouts.prometheusMs, 5000);
+  assert.equal(loaded.smtp.requireTLS, true);
 });
 
 test("rejects invalid configuration without exposing mounted secret", () => {

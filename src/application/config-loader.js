@@ -73,6 +73,6 @@ export function loadApplicationConfig(configPath, { schemaPath = join(projectRoo
     bearerToken: readMountedFile(raw.bearerTokenFile, "bearerTokenFile", { secret: true }),
     targetRegistry,
     prometheus: raw.prometheus ? Object.freeze({ baseUrl: raw.prometheus.baseUrl }) : undefined,
-    smtp: Object.freeze({ ...raw.smtp, timeoutMs: raw.timeouts.smtpMs, username: raw.smtp.usernameFile ? readMountedFile(raw.smtp.usernameFile, "smtp.usernameFile", { secret: true }) : undefined, password: raw.smtp.passwordFile ? readMountedFile(raw.smtp.passwordFile, "smtp.passwordFile", { secret: true }) : undefined })
+    smtp: Object.freeze({ ...raw.smtp, requireTLS: raw.smtp.requireTLS ?? false, timeoutMs: raw.timeouts.smtpMs, username: raw.smtp.usernameFile ? readMountedFile(raw.smtp.usernameFile, "smtp.usernameFile", { secret: true }) : undefined, password: raw.smtp.passwordFile ? readMountedFile(raw.smtp.passwordFile, "smtp.passwordFile", { secret: true }) : undefined })
   });
 }

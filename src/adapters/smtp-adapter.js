@@ -27,7 +27,7 @@ import nodemailer from "nodemailer";
 export class SmtpAdapter {
   constructor(config, { transport } = {}) {
     this.from = config.from; this.to = config.to;
-    this.transport = transport ?? nodemailer.createTransport({ host: config.host, port: config.port, secure: config.secure ?? false, auth: config.username ? { user: config.username, pass: config.password } : undefined, connectionTimeout: config.timeoutMs, greetingTimeout: config.timeoutMs, socketTimeout: config.timeoutMs, disableFileAccess: true, disableUrlAccess: true });
+    this.transport = transport ?? nodemailer.createTransport({ host: config.host, port: config.port, secure: config.secure ?? false, requireTLS: config.requireTLS ?? false, auth: config.username ? { user: config.username, pass: config.password } : undefined, connectionTimeout: config.timeoutMs, greetingTimeout: config.timeoutMs, socketTimeout: config.timeoutMs, disableFileAccess: true, disableUrlAccess: true });
   }
   async send(result, rendered) {
     const isResolved = result.lifecycleStatus === "resolved";
@@ -38,6 +38,13 @@ export class SmtpAdapter {
     const subject = isResolved
       ? `${prefix} [${env}] Tomcat Service: ${alertName} Restored (Target: ${result.targetId})`
       : `${prefix} [${env}] Tomcat Service: ${alertName} (Target: ${result.targetId})`;
-    return this.transport.sendMail({ from: this.from, to: this.to, subject, text: rendered.text, html: rendered.html });
+    const priority = (!isResolved && severity === "CRITICAL") ? "1" : "3";
+    const headers = {
+      "Auto-Submitted": "auto-generated",
+      "X-Priority": priority,
+      "X-Incident-Target": result.targetId || "unknown",
+      "X-Diagnostic-Rule": alertName
+    };
+    return this.transport.sendMail({ from: this.from, to: this.to, subject, text: rendered.text, html: rendered.html, headers });
   }
 }
