@@ -54,3 +54,65 @@ test("createDefaultEvidenceCollector reads spool evidence from target", async ()
   assert.equal(evidence[0].type, "container_state");
   assert.equal(evidence[0].value.state, "exited");
 });
+
+test("createDefaultEvidenceCollector queries live Prometheus metrics when prometheusSelector and prometheusAdapter are configured", async () => {
+  const { createDefaultEvidenceCollector } = await import("../../src/application/application.js");
+  const { TargetRegistry } = await import("../../src/application/target-registry.js");
+  const { PrometheusAdapter } = await import("../../src/adapters/prometheus-adapter.js");
+
+  const registry = new TargetRegistry([{
+    identity: { environment: "lab", host: "tomcat-01", tomcat_instance: "default" },
+    prometheusSelector: 'job="tomcat-jmx-exporter",instance="tomcat-01:9404"'
+  }]);
+
+  const queried = [];
+  const prometheusAdapter = new PrometheusAdapter({
+    baseUrl: "http://prometheus.local:9090",
+    fetchImpl: async (url) => {
+      queried.push(new URL(url).searchParams.get("query"));
+      return {
+        ok: true,
+        json: async () => ({ status: "success", data: { result: [{ metric: { __name__: "up" }, value: [12345, "1"] }] } })
+      };
+    }
+  });
+
+  const collector = createDefaultEvidenceCollector(registry, { prometheusAdapter });
+  const evidence = await collector({ targetId: "lab/tomcat-01/default", generation: "1", startsAt: new Date().toISOString() });
+
+  assert.equal(evidence.length, 3);
+  assert.equal(evidence[0].type, "jmx_scrape");
+  assert.equal(evidence[0].status, "collected");
+  assert.equal(evidence[1].type, "jvm_memory_pool");
+  assert.equal(evidence[2].type, "tomcat_threads_busy");
+  assert.equal(queried.length, 3);
+  assert.equal(queried[0], 'up{job="tomcat-jmx-exporter",instance="tomcat-01:9404"}');
+});
+
+test("createDefaultEvidenceCollector handles Prometheus timeouts gracefully without throwing", async () => {
+  const { createDefaultEvidenceCollector } = await import("../../src/application/application.js");
+  const { TargetRegistry } = await import("../../src/application/target-registry.js");
+  const { PrometheusAdapter } = await import("../../src/adapters/prometheus-adapter.js");
+
+  const registry = new TargetRegistry([{
+    identity: { environment: "lab", host: "tomcat-01", tomcat_instance: "default" },
+    prometheusSelector: 'job="tomcat-jmx-exporter"'
+  }]);
+
+  const prometheusAdapter = new PrometheusAdapter({
+    baseUrl: "http://prometheus.local:9090",
+    fetchImpl: async () => {
+      const error = new Error("timeout");
+      error.name = "TimeoutError";
+      throw error;
+    }
+  });
+
+  const collector = createDefaultEvidenceCollector(registry, { prometheusAdapter });
+  const evidence = await collector({ targetId: "lab/tomcat-01/default", generation: "1", startsAt: new Date().toISOString() });
+
+  assert.equal(evidence.length, 3);
+  assert.equal(evidence[0].status, "timeout");
+  assert.equal(evidence[1].status, "timeout");
+  assert.equal(evidence[2].status, "timeout");
+});

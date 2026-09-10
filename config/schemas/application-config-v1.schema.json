@@ -48,7 +48,15 @@
       "properties": {
         "diagnosticMs": { "type": "integer", "minimum": 100, "maximum": 300000 },
         "smtpMs": { "type": "integer", "minimum": 100, "maximum": 60000 },
-        "shutdownMs": { "type": "integer", "minimum": 100, "maximum": 60000 }
+        "shutdownMs": { "type": "integer", "minimum": 100, "maximum": 60000 },
+        "prometheusMs": { "type": "integer", "minimum": 100, "maximum": 60000 }
+      }
+    },
+    "prometheus": {
+      "type": "object", "additionalProperties": false,
+      "required": ["baseUrl"],
+      "properties": {
+        "baseUrl": { "type": "string", "minLength": 1 }
       }
     },
     "requestLimitBytes": { "type": "integer", "minimum": 1024, "maximum": 1048576 }

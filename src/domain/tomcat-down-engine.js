@@ -44,7 +44,7 @@ const result = (ruleId, branch, assessment, classification, confidence = null) =
 
 export function evaluateTomcatDown(evidence, event = {}) {
   const ruleId = event?.labels?.alertname || "TomcatDown";
-  const jmxFails = found(evidence, "jmx_scrape", (value) => value?.available === false);
+  const jmxFails = found(evidence, "jmx_scrape", (value) => value?.available === false || (Array.isArray(value) && value.some((v) => v?.value?.[1] === "0")));
   const healthUp = found(evidence, "application_health", (value) => value?.up === true);
   const healthFails = found(evidence, "application_health", (value) => value?.up === false);
   const running = found(evidence, "container_state", (value) => value?.state === "running");

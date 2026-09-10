@@ -53,11 +53,12 @@ import { createWebhookValidator } from "../server/webhook-schema.js";
 import { createRulepackValidator } from "../server/rulepack-schema.js";
 import { DynamicRuleEvaluator } from "../domain/rulepack-loader.js";
 import { SmtpAdapter } from "../adapters/smtp-adapter.js";
+import { PrometheusAdapter } from "../adapters/prometheus-adapter.js";
 import { readCollectorSpool } from "../adapters/collector-spool-adapter.js";
 import { collectLocalFileEvidence } from "../adapters/local-file-evidence-adapter.js";
 import { collectApplicationHealth } from "../adapters/application-health-adapter.js";
 
-export function createDefaultEvidenceCollector(targetRegistry) {
+export function createDefaultEvidenceCollector(targetRegistry, { prometheusAdapter } = {}) {
   return async (event) => {
     const target = targetRegistry.targets.get(event.targetId);
     if (!target) return [];
@@ -88,6 +89,18 @@ export function createDefaultEvidenceCollector(targetRegistry) {
         }
       }
       evidence.push(...latestByType.values());
+    }
+    if (target.prometheusSelector && prometheusAdapter) {
+      try {
+        const [upEv, memEv, threadsEv] = await Promise.all([
+          prometheusAdapter.query(target, "up", context, { type: "jmx_scrape", strength: "supporting" }),
+          prometheusAdapter.query(target, "jvm_memory_pool_used_bytes", context, { type: "jvm_memory_pool", strength: "contextual" }),
+          prometheusAdapter.query(target, "tomcat_threads_busy_threads", context, { type: "tomcat_threads_busy", strength: "contextual" })
+        ]);
+        if (upEv) evidence.push(upEv);
+        if (memEv) evidence.push(memEv);
+        if (threadsEv) evidence.push(threadsEv);
+      } catch {}
     }
     if (target.logDirectory) {
       evidence.push(collectLocalFileEvidence(target, context, { rootField: "logDirectory", relativePath: "catalina.out", type: "orderly_shutdown" }));
@@ -143,7 +156,8 @@ export class DiagnosticApplication {
       else {
         const smtp = this.dependencies.smtp ?? new SmtpAdapter(this.config.smtp);
         const notification = this.dependencies.notification ?? new NotificationDelivery(this.repository, smtp, { health: this.health });
-        const collectEvidence = this.dependencies.collectEvidence ?? createDefaultEvidenceCollector(this.config.targetRegistry);
+        const prometheus = this.dependencies.prometheusAdapter ?? (this.config.prometheus ? new PrometheusAdapter({ baseUrl: this.config.prometheus.baseUrl, timeoutMs: this.config.timeouts?.prometheusMs ?? 5000 }) : null);
+        const collectEvidence = this.dependencies.collectEvidence ?? createDefaultEvidenceCollector(this.config.targetRegistry, { prometheusAdapter: prometheus });
         this.worker = new DiagnosticWorker(this.repository, collectEvidence, {
           timeoutMs: this.config.timeouts.diagnosticMs,
           notification,

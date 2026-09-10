@@ -29,7 +29,7 @@ export class PrometheusAdapter {
     this.timeoutMs = timeoutMs;
   }
 
-  async query(target, query, context) {
+  async query(target, query, context, { type = "jmx_scrape", strength = "supporting" } = {}) {
     const url = new URL("/api/v1/query", this.baseUrl);
     url.searchParams.set("query", `${query}{${target.prometheusSelector}}`);
     let status = "collected";
@@ -46,9 +46,9 @@ export class PrometheusAdapter {
       status = error.name === "TimeoutError" || error.name === "AbortError" ? "timeout" : "unavailable";
     }
     return createEvidence({
-      source: "prometheus", type: "jmx_scrape", targetId: target.targetId,
+      source: "prometheus", type, targetId: target.targetId,
       generation: context.generation, observedAt: context.observedAt,
-      collectedAt: context.collectedAt, status, strength: "supporting", value,
+      collectedAt: context.collectedAt, status, strength, value,
       redacted: false
     });
   }
