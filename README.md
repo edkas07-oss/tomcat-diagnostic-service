@@ -62,30 +62,96 @@ Laporan diagnosis insiden diterbitkan dalam format *HTML multi-part* dan *Plain 
 
 ---
 
-## 🔌 Spesifikasi Webhook Ingestion API (Alertmanager Ingestion)
+## 🌐 Matriks Referensi REST API (Consolidated REST API Reference)
 
-- **Base URL:** `https://diagnostic-service:8443`
-- **Header Wajib:** `Authorization: Bearer <token>`, `Content-Type: application/json`
-- **Batas Ukuran Payload:** `262144 bytes` (256 KiB) (TN-008)
+Diagnostic Service menyediakan antarmuka HTTPS internal terenkripsi (Port 8443) untuk kebutuhan observabilitas, ingest webhook alert otomatis, dan manajemen aturan deklaratif secara *live*.
 
-| Method | Endpoint | Deskripsi | Respons Status |
-| :---: | :--- | :--- | :---: |
-| `POST` | `/api/v1/alerts/alertmanager` | Ingestion payload alert insiden dari Alertmanager (Webhook Schema v4) | `202 Accepted` / `400` / `401` / `413` |
+### 📋 Matriks Endpoint Terpadu
 
-### Kontrak Label Wajib Webhook Schema v4 (TN-014)
+| Method | Endpoint Path | Autentikasi | Request / Response Format | Batas Payload (*Size Limit*) | Deskripsi Fungsional & Status Code |
+| :---: | :--- | :---: | :---: | :---: | :--- |
+| `GET` | `/health/live` | Public | `-` / `application/json` | - | **Liveness Probe:** Memverifikasi proses Node.js aktif dan berjalan normal (`200 {"status":"UP"}`). Digunakan oleh container orchestrator (Podman/K8s). |
+| `GET` | `/health/ready` | Public | `-` / `application/json` | - | **Readiness Probe:** Mengembalikan status kesiapan antrean dan migrasi SQLite (`200` jika siap melayani trafik, `503` jika startup gagal/shutting down). |
+| `GET` | `/health` | Public | `-` / `text/plain` | - | **Self-Monitoring Scrape:** Mengekspos metrik kesehatan internal format Prometheus text format untuk pemantauan ketersediaan via Prometheus (`up{job="tomcat-diagnostic-service"}`). |
+| `GET` | `/metrics` | Public | `-` / `text/plain` | - | **Operational Metrics:** Mengekspos seluruh metrik operasional internal format Prometheus text format (`diagnostic_db_size_bytes`, `diagnostic_stale_locks_recovered_total`, dll.). |
+| `POST` | `/api/v1/alerts/alertmanager` | Bearer Token | `application/json` / `application/json` | 256 KiB | **Webhook Ingestion:** Menerima payload alert Alertmanager v4, melakukan deduplikasi event atomik, dan enqueue ke `work_queue` SQLite (`202 Accepted` / `400` / `401` / `413` / `415` / `429`). |
+| `GET` | `/api/v1/rules` | Bearer Token | `-` / `application/json` | - | **Rules Catalog Export:** Mengambil seluruh daftar aturan aktif (gabungan built-in TD-01..08 dan custom rules). Mendukung query filter `?category=<enum>` (`200 OK` / `401`). |
+| `POST` | `/api/v1/rules` | Bearer Token | `application/json` / `application/json` | 64 KiB | **Declarative Rule Ingestion:** Mendaftarkan aturan baru ke database SQLite `custom_rules` dan melakukan *hot-reloading* instan ke RAM evaluator (`201 Created` / `400` / `401` / `409` / `413` / `415`). |
+| `GET` | `/api/v1/rules/:id_or_branch` | Bearer Token | `-` / `application/json` | - | **Single Rule Detail:** Mengambil detail aturan spesifik berdasarkan nama branch (misal: `TD-01`, `TD-09`) atau database ID (`200 OK` / `401` / `404 Not Found`). |
+| `PUT`, `DELETE`, `PATCH` | `/api/v1/rules/*` | - | - | - | **Append-Only Immutability Guard:** Seluruh operasi mutasi atau penghapusan aturan dilarang secara mutlak (`405 Method Not Allowed`). |
 
-Setiap payload alert wajib memenuhi skema `config/schemas/alertmanager-webhook-v4.schema.json`:
+---
 
-| Label Name | Nilai Contoh | Validasi & Kebutuhan |
-| :--- | :--- | :--- |
-| `alertname` | `TomcatDown`, `TomcatThreadExhaustion`, dll. | Wajib; identitas nama alert insiden |
-| `environment` | `lab`, `production` | Wajib; identitas lingkungan target |
-| `host` | `tomcat-01`, `edkas-pc1` | Wajib; hostname mesin target |
-| `tomcat_instance` | `default`, `tomcat-jmx-exporter` | Wajib; identitas instance workload |
-| `check` | `runtime-availability`, `application-health`, dll. | Wajib; klasifikasi tipe pemeriksaan telemetri |
-| `severity` | `critical`, `warning` | Wajib; tingkat keparahan insiden |
+### 🔌 Detail Spesifikasi & Contoh Interaksi API
 
-Alertmanager sub-route dikonfigurasi dengan `continue: false` dan `max_alerts: 1` untuk menjamin isolasi delivery.
+#### 1. Webhook Ingestion (`POST /api/v1/alerts/alertmanager`)
+- **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+- **Payload Max:** `256 KiB` (TN-008)
+- **Skema Label Wajib:** `config/schemas/alertmanager-webhook-v4.schema.json` (`alertname`, `environment`, `host`, `tomcat_instance`, `check`, `severity`).
+
+```bash
+curl -k -s -X POST https://127.0.0.1:8443/api/v1/alerts/alertmanager \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "receiver": "lab-diagnostic-service",
+    "status": "firing",
+    "groupKey": "{}:{alertname=\"TomcatDown\"}",
+    "alerts": [{
+      "status": "firing",
+      "labels": {
+        "alertname": "TomcatDown",
+        "environment": "lab",
+        "host": "edkas-pc1",
+        "tomcat_instance": "default",
+        "check": "runtime-availability",
+        "severity": "critical"
+      },
+      "annotations": {
+        "summary": "Tomcat runtime is unreachable"
+      },
+      "startsAt": "2026-09-11T12:00:00Z"
+    }]
+  }'
+```
+
+#### 2. Declarative Rule Ingestion (`POST /api/v1/rules`)
+- **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+- **Payload Max:** `64 KiB`
+- **Skema Validasi:** `config/schemas/rulepack-v1.schema.json` (Validasi Ajv Draft 2020-12, Anti-Collision, ReDoS-Safe Regex, Kategori Domain Resmi).
+
+```bash
+curl -k -s -X POST https://127.0.0.1:8443/api/v1/rules \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ruleId": "TomcatDown",
+    "branch": "TD-09",
+    "ruleName": "DatabaseConnectionPoolExhausted",
+    "category": "database_persistence",
+    "targetSource": "local_file",
+    "pattern": "CannotGetJdbcConnectionException|HikariPool.*Connection is not available",
+    "assessment": "Koneksi ke database backend habis atau mengalami deadlock pool",
+    "classification": "DATABASE_POOL_EXHAUSTION",
+    "confidence": "HIGH",
+    "recommendedActions": [
+      "Periksa metrik connection pool database",
+      "Periksa status database server backend"
+    ]
+  }'
+```
+
+#### 3. Rules Catalog Export & Filtering (`GET /api/v1/rules`)
+- **Headers:** `Authorization: Bearer <token>`
+- **Filter Query Opsional:** `?category=jvm_memory`, `?category=concurrency_threading`, `?category=database_persistence`, dll.
+
+```bash
+# Export seluruh aturan aktif
+curl -k -s -H "Authorization: Bearer <token>" https://127.0.0.1:8443/api/v1/rules
+
+# Filter berdasarkan kategori kegagalan database
+curl -k -s -H "Authorization: Bearer <token>" "https://127.0.0.1:8443/api/v1/rules?category=database_persistence"
+```
 
 ---
 
