@@ -144,9 +144,9 @@ pipeline {
                     echo "STAGE 5: BUILD & PIN OCI IMAGE"
                     echo "========================================"
 
-                    export REGISTRY_HOST="${params.REGISTRY_HOST}"
-                    if [ -n "${params.IMAGE_TAG}" ]; then
-                        export IMAGE_TAG="${params.IMAGE_TAG}"
+                    export REGISTRY_HOST="${REGISTRY_HOST:-localhost}"
+                    if [ -n "${IMAGE_TAG:-}" ]; then
+                        export IMAGE_TAG="${IMAGE_TAG}"
                     fi
                     export PUSH_IMAGE="false"
 
@@ -167,9 +167,9 @@ pipeline {
                     echo "STAGE 6: EPHEMERAL CONTAINER SMOKE TEST"
                     echo "========================================"
 
-                    export REGISTRY_HOST="${params.REGISTRY_HOST}"
-                    if [ -n "${params.IMAGE_TAG}" ]; then
-                        export IMAGE_TAG="${params.IMAGE_TAG}"
+                    export REGISTRY_HOST="${REGISTRY_HOST:-localhost}"
+                    if [ -n "${IMAGE_TAG:-}" ]; then
+                        export IMAGE_TAG="${IMAGE_TAG}"
                     fi
 
                     bash scripts/test-image.sh
@@ -193,9 +193,9 @@ pipeline {
                     echo "========================================"
 
                     version="$(<VERSION)"
-                    tag="${params.IMAGE_TAG:-${version}}"
-                    target_image="${params.REGISTRY_HOST}/${PROJECT_NAME}:${tag}"
-                    latest_image="${params.REGISTRY_HOST}/${PROJECT_NAME}:latest"
+                    tag="${IMAGE_TAG:-${version}}"
+                    target_image="${REGISTRY_HOST:-localhost}/${PROJECT_NAME}:${tag}"
+                    latest_image="${REGISTRY_HOST:-localhost}/${PROJECT_NAME}:latest"
 
                     echo "Mendorong image ke registry: ${target_image} & ${latest_image}"
                     podman push "${target_image}"
