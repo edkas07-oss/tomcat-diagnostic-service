@@ -58,6 +58,7 @@ required_files=(
     AGENTS.md
     .containerignore
     Containerfile
+    Jenkinsfile
     LICENSE
     README.md
     PROJECT

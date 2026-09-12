@@ -37,8 +37,12 @@ PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 
 # shellcheck source=../CONFIG
 source "${PROJECT_ROOT}/CONFIG"
+project_name="$(<"${PROJECT_ROOT}/PROJECT")"
 version="$(<"${PROJECT_ROOT}/VERSION")"
-image="${IMAGE_NAME}:${version}"
+
+REGISTRY_HOST="${REGISTRY_HOST:-localhost}"
+IMAGE_TAG="${IMAGE_TAG:-${version}}"
+image="${REGISTRY_HOST}/${project_name}:${IMAGE_TAG}"
 
 [[ "$(podman image inspect "${image}" --format '{{.Config.User}}')" == "node" ]]
 [[ "$(podman image inspect "${image}" --format '{{.Config.WorkingDir}}')" == "/app" ]]
