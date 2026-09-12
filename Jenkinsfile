@@ -56,7 +56,7 @@ pipeline {
             steps {
                 checkout scm
 
-                sh '''
+                sh '''#!/usr/bin/env bash
                     set -euo pipefail
                     echo "========================================"
                     echo "STAGE 1: CHECKOUT SOURCE CODE"
@@ -78,7 +78,7 @@ pipeline {
 
         stage('Verify Build Agent') {
             steps {
-                sh '''
+                sh '''#!/usr/bin/env bash
                     set -euo pipefail
                     echo "========================================"
                     echo "STAGE 2: VERIFY BUILD AGENT"
@@ -101,7 +101,7 @@ pipeline {
 
         stage('Static Lint & Governance Validation') {
             steps {
-                sh '''
+                sh '''#!/usr/bin/env bash
                     set -euo pipefail
                     echo "========================================"
                     echo "STAGE 3: STATIC LINT & GOVERNANCE VALIDATION"
@@ -117,7 +117,7 @@ pipeline {
 
         stage('Unit & Schema Testing') {
             steps {
-                sh '''
+                sh '''#!/usr/bin/env bash
                     set -euo pipefail
                     echo "========================================"
                     echo "STAGE 4: AUTOMATED UNIT & SCHEMA TESTING (62 SUITES)"
@@ -138,7 +138,7 @@ pipeline {
 
         stage('Build & Pin OCI Image') {
             steps {
-                sh '''
+                sh '''#!/usr/bin/env bash
                     set -euo pipefail
                     echo "========================================"
                     echo "STAGE 5: BUILD & PIN OCI IMAGE"
@@ -161,7 +161,7 @@ pipeline {
 
         stage('Ephemeral Smoke Test') {
             steps {
-                sh '''
+                sh '''#!/usr/bin/env bash
                     set -euo pipefail
                     echo "========================================"
                     echo "STAGE 6: EPHEMERAL CONTAINER SMOKE TEST"
@@ -186,7 +186,7 @@ pipeline {
                 expression { return params.PUSH_IMAGE == true }
             }
             steps {
-                sh '''
+                sh '''#!/usr/bin/env bash
                     set -euo pipefail
                     echo "========================================"
                     echo "STAGE 7: PUBLISH IMAGE TO REGISTRY"
