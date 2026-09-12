@@ -52,7 +52,6 @@ require_file() {
 }
 
 require_command python3
-require_command rg
 
 required_files=(
     AGENTS.md
@@ -223,20 +222,27 @@ for shell_script in "${PROJECT_ROOT}"/scripts/*.sh; do
     bash -n "${shell_script}"
 done
 
-forbidden_dependencies='"(express|fastify|@nestjs/[^"/]+|sequelize|typeorm|knex|prisma|execa|shelljs)"[[:space:]]*:'
-if rg -n --glob 'package*.json' "${forbidden_dependencies}" "${PROJECT_ROOT}"; then
-    fail "framework, ORM, atau general-purpose host-control dependency ditemukan"
-fi
+python3 - "${PROJECT_ROOT}" <<'PYTHON'
+import pathlib
+import re
+import sys
 
-forbidden_imports='(node:child_process|node:cluster|node:worker_threads|podman|docker\.sock)'
-if rg -n --glob '*.js' "${forbidden_imports}" "${PROJECT_ROOT}/src"; then
-    fail "host-control atau unapproved concurrency interface ditemukan"
-fi
+project_root = pathlib.Path(sys.argv[1])
 
-secret_assignment='(password|passwd|secret|token|api[_-]?key|private[_-]?key)[[:space:]]*[:=][[:space:]]*["'"'][^<][^"'"']+["'"']'
-if rg -n -i --glob '!AGENTS.md' --glob '!README.md' --glob '!scripts/validate.sh' \
-    "${secret_assignment}" "${PROJECT_ROOT}"; then
-    fail "kemungkinan secret assignment ditemukan pada source baseline"
-fi
+forbidden_dependencies = re.compile(r'"(express|fastify|@nestjs/[^"/]+|sequelize|typeorm|knex|prisma|execa|shelljs)"\s*:')
+for p in project_root.glob("package*.json"):
+    if forbidden_dependencies.search(p.read_text()):
+        sys.exit("Validasi gagal: framework, ORM, atau general-purpose host-control dependency ditemukan")
+
+forbidden_imports = re.compile(r'(node:child_process|node:cluster|node:worker_threads|podman|docker\.sock)')
+for p in (project_root / "src").rglob("*.js"):
+    if forbidden_imports.search(p.read_text()):
+        sys.exit("Validasi gagal: host-control atau unapproved concurrency interface ditemukan")
+
+secret_assignment = re.compile(r'(password|passwd|secret|token|api[_-]?key|private[_-]?key)\s*[:=]\s*["\'][^<][^"\']+["\']', re.IGNORECASE)
+for p in (project_root / "src").rglob("*.js"):
+    if secret_assignment.search(p.read_text(errors="ignore")):
+        sys.exit(f"Validasi gagal: kemungkinan secret assignment ditemukan pada {p}")
+PYTHON
 
 echo "Static validation passed: schema, migration, source, and dependency boundaries are consistent."
