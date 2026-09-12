@@ -124,10 +124,10 @@ pipeline {
                     echo "========================================"
                     podman run --rm \
                         --userns=keep-id \
-                        --volume "${WORKSPACE}:/app:ro,Z" \
+                        --volume "${WORKSPACE}:/app:Z" \
                         --workdir /app \
                         "${NODE_RUNNER_IMAGE}" \
-                        npm test
+                        sh -c "npm ci --omit=dev --ignore-scripts --no-audit --no-fund && npm test"
                 '''
             }
         }
