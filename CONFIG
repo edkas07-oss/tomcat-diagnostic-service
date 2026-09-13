@@ -4,12 +4,19 @@
 # pada TN berikutnya. Jangan menambahkan credential, certificate, target host,
 # atau nilai environment-specific ke file ini.
 
+# Enterprise Container Registry Configuration
+REGISTRY_URL="${REGISTRY_URL:-localhost}"
+REGISTRY_NAMESPACE="${REGISTRY_NAMESPACE:-}"
+REGISTRY_TLS_VERIFY="${REGISTRY_TLS_VERIFY:-true}"
+IMAGE_PULL_POLICY="${IMAGE_PULL_POLICY:-IfNotPresent}"
+REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE:-}"
+
 # Toolchain aplikasi yang telah diterima melalui TM-ADR-0013.
 NODE_VERSION=24.18.0
 MODULE_TYPE=module
 
 # Identitas application image dan immutable local base yang dibuktikan TN-010.
-IMAGE_NAME=localhost/tomcat-diagnostic-service
+IMAGE_NAME="${REGISTRY_URL}${REGISTRY_NAMESPACE:+/${REGISTRY_NAMESPACE}}/tomcat-diagnostic-service"
 BASE_IMAGE=localhost/nodejs@sha256:76b1444d507be3398f3196f37bd20f7a97a703871ed2716fa91a1a9520fc482d
 BASE_IMAGE_ID=bccb45bc1e48a07ac6c2cd36f7352bccb555e8b3e6070cbefa727d83d6dee3bc
 
@@ -19,4 +26,3 @@ LOG_VOLUME=tomcat_logs
 
 # Container engine override (optional: podman / docker)
 CONTAINER_ENGINE="${CONTAINER_ENGINE:-}"
-

@@ -104,9 +104,11 @@ required_files=(
     src/main.js
     scripts/build.sh
     scripts/container-runtime-helper.sh
+    scripts/registry-login-helper.sh
     scripts/test-image.sh
     scripts/test-image-component.sh
     scripts/validate.sh
+    CONFIG.example
 )
 
 

@@ -26,6 +26,21 @@ pipeline {
             description: 'Enterprise Container Registry host (e.g. localhost, harbor.internal, nexus.internal:8443)'
         )
         string(
+            name: 'REGISTRY_NAMESPACE',
+            defaultValue: '',
+            description: 'Registry Project/Namespace (e.g. tomcat-monitoring, library, kosongkan jika root)'
+        )
+        string(
+            name: 'REGISTRY_TLS_VERIFY',
+            defaultValue: 'true',
+            description: 'TLS verification policy (true, false, atau path sertifikat kustom CA)'
+        )
+        string(
+            name: 'REGISTRY_CREDENTIALS_ID',
+            defaultValue: '',
+            description: 'Jenkins Credentials ID untuk autentikasi registry (Username with Password)'
+        )
+        string(
             name: 'IMAGE_TAG',
             defaultValue: '',
             description: 'Custom OCI Image Tag (kosongkan untuk menggunakan versi semantik pada berkas VERSION)'
@@ -145,6 +160,8 @@ pipeline {
                     echo "========================================"
 
                     export REGISTRY_HOST="${REGISTRY_HOST:-localhost}"
+                    export REGISTRY_NAMESPACE="${REGISTRY_NAMESPACE:-}"
+                    export REGISTRY_TLS_VERIFY="${REGISTRY_TLS_VERIFY:-true}"
                     if [ -n "${IMAGE_TAG:-}" ]; then
                         export IMAGE_TAG="${IMAGE_TAG}"
                     fi
@@ -168,6 +185,7 @@ pipeline {
                     echo "========================================"
 
                     export REGISTRY_HOST="${REGISTRY_HOST:-localhost}"
+                    export REGISTRY_NAMESPACE="${REGISTRY_NAMESPACE:-}"
                     if [ -n "${IMAGE_TAG:-}" ]; then
                         export IMAGE_TAG="${IMAGE_TAG}"
                     fi
@@ -194,12 +212,28 @@ pipeline {
 
                     version="$(<VERSION)"
                     tag="${IMAGE_TAG:-${version}}"
-                    target_image="${REGISTRY_HOST:-localhost}/${PROJECT_NAME}:${tag}"
-                    latest_image="${REGISTRY_HOST:-localhost}/${PROJECT_NAME}:latest"
+                    reg_host="${REGISTRY_HOST:-localhost}"
+                    reg_ns="${REGISTRY_NAMESPACE:-}"
+                    tls_verify="${REGISTRY_TLS_VERIFY:-true}"
+
+                    if [ -n "${reg_ns}" ]; then
+                        target_image="${reg_host}/${reg_ns}/${PROJECT_NAME}:${tag}"
+                        latest_image="${reg_host}/${reg_ns}/${PROJECT_NAME}:latest"
+                    else
+                        target_image="${reg_host}/${PROJECT_NAME}:${tag}"
+                        latest_image="${reg_host}/${PROJECT_NAME}:latest"
+                    fi
+
+                    push_opts=()
+                    if [ "${tls_verify}" = "false" ]; then
+                        push_opts+=(--tls-verify=false)
+                    elif [ "${tls_verify}" != "true" ] && [ -f "${tls_verify}" ]; then
+                        push_opts+=(--cert-dir "$(dirname "${tls_verify}")")
+                    fi
 
                     echo "Mendorong image ke registry: ${target_image} & ${latest_image}"
-                    podman push "${target_image}"
-                    podman push "${latest_image}"
+                    podman push "${push_opts[@]}" "${target_image}"
+                    podman push "${push_opts[@]}" "${latest_image}"
                 '''
             }
         }

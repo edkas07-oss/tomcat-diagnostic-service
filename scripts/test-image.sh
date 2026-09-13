@@ -41,9 +41,15 @@ source "${SCRIPT_DIR}/container-runtime-helper.sh"
 project_name="$(<"${PROJECT_ROOT}/PROJECT")"
 version="$(<"${PROJECT_ROOT}/VERSION")"
 
-REGISTRY_HOST="${REGISTRY_HOST:-localhost}"
+REGISTRY_TARGET="${REGISTRY_URL:-${REGISTRY_HOST:-localhost}}"
+REGISTRY_NS="${REGISTRY_NAMESPACE:-}"
 IMAGE_TAG="${IMAGE_TAG:-${version}}"
-image="${REGISTRY_HOST}/${project_name}:${IMAGE_TAG}"
+
+if [[ -n "${REGISTRY_NS}" ]]; then
+    image="${REGISTRY_TARGET}/${REGISTRY_NS}/${project_name}:${IMAGE_TAG}"
+else
+    image="${REGISTRY_TARGET}/${project_name}:${IMAGE_TAG}"
+fi
 
 [[ "$("${CONTAINER_ENGINE}" image inspect "${image}" --format '{{.Config.User}}')" == "node" ]]
 [[ "$("${CONTAINER_ENGINE}" image inspect "${image}" --format '{{.Config.WorkingDir}}')" == "/app" ]]
@@ -69,4 +75,3 @@ image="${REGISTRY_HOST}/${project_name}:${IMAGE_TAG}"
     test ! -e README.md
     ! find /app -type f \( -name "*.key" -o -name "*.crt" -o -name "*.pem" -o -name "*.sqlite*" \) -print -quit | grep -q .
 '
-

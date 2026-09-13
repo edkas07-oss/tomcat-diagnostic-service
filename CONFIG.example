@@ -1,0 +1,27 @@
+# Contoh Konfigurasi Deklaratif untuk Enterprise Container Registry (Harbor / Nexus / Quay)
+#
+# Salin berkas ini ke CONFIG atau setel variabel lingkungan berikut sebelum
+# menjalankan build, test, dan deployment pada server enterprise kantor.
+
+# 1. Enterprise Container Registry Parameters
+REGISTRY_URL="harbor.internal.corp:5000"
+REGISTRY_NAMESPACE="tomcat-monitoring"
+REGISTRY_TLS_VERIFY="true"
+IMAGE_PULL_POLICY="Always"
+REGISTRY_AUTH_FILE="${HOME}/.config/containers/auth.json"
+
+# 2. Toolchain & Runtime Baseline
+NODE_VERSION=24.18.0
+MODULE_TYPE=module
+
+# 3. Application Image Identity (Resolved from Registry Parameters)
+IMAGE_NAME="${REGISTRY_URL}${REGISTRY_NAMESPACE:+/${REGISTRY_NAMESPACE}}/tomcat-diagnostic-service"
+BASE_IMAGE="harbor.internal.corp:5000/tomcat-monitoring/nodejs@sha256:76b1444d507be3398f3196f37bd20f7a97a703871ed2716fa91a1a9520fc482d"
+BASE_IMAGE_ID=bccb45bc1e48a07ac6c2cd36f7352bccb555e8b3e6070cbefa727d83d6dee3bc
+
+# 4. Storage Volume Configuration
+DATA_VOLUME=diagnostic_data
+LOG_VOLUME=tomcat_logs
+
+# 5. Container Engine Override (podman / docker)
+CONTAINER_ENGINE="podman"
