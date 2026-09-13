@@ -339,12 +339,33 @@ podman run --detach --pull=never \
 
 ---
 
+## 🏭 Integrasi Enterprise Container Registry & Image Lifecycle
+
+Sesuai [TASK-TM-025](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/follow-up-tasks.md#task-tm-025-tn-010-implement-plug-and-play-enterprise-container-registry-integration-and-image-lifecycle-configuration) dan [TN-010](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/engineering-journal/continuous-integration-and-deployment/TN-010-implement-plug-and-play-container-registry-integration.md), repositori ini mendukung integrasi langsung ke Container Registry Enterprise (Harbor, Nexus, Quay, GitLab/Gitea) dengan prinsip **Zero Logic Modification**:
+
+### 1. Parameter Konfigurasi Deklaratif ([`CONFIG`](CONFIG) & [`CONFIG.example`](CONFIG.example))
+```bash
+REGISTRY_URL="localhost"                  # Enterprise: harbor.corp.internal:5000
+REGISTRY_NAMESPACE=""                     # Enterprise: tomcat-platform
+REGISTRY_TLS_VERIFY="false"               # Enterprise: true
+REGISTRY_AUTH_FILE=""                     # Enterprise: ~/.config/containers/auth.json
+```
+
+### 2. Autentikasi & Manajemen Kredensial Terisolasi
+Gunakan helper [`scripts/registry-login-helper.sh`](scripts/registry-login-helper.sh) untuk autentikasi tanpa mengotori daemon global:
+```bash
+./scripts/registry-login-helper.sh login harbor.corp.internal:5000 myuser /path/to/token.txt ~/.config/containers/auth.json
+```
+
+---
+
 ## 📂 Struktur Repositori
 
 ```text
 tomcat-diagnostic-service/
 ├── AGENTS.md          Tata kelola agen dan batasan repositori
-├── CONFIG             Metadata toolchain non-secret
+├── CONFIG             Metadata toolchain non-secret & registry defaults
+├── CONFIG.example     Enterprise container registry configuration template
 ├── Containerfile      Digest-pinned application container image
 ├── LICENSE            Lisensi eksklusif kepemilikan (Proprietary & Confidential)
 ├── PROJECT            Identitas project yang dapat dibaca script
@@ -368,12 +389,13 @@ tomcat-diagnostic-service/
 │   ├── application/   Diagnostic worker, Result renderer, Target registry, & Notification orchestrator
 │   ├── domain/        Multi-Domain Dispatcher, 4 Domain Decision Engines, Rulepack loader, & Dynamic evaluator
 │   └── server/        HTTPS server, Authentication, Routes, & Schema validators
-├── test/              Unit dan temporary-SQLite integration test suites (54 unit tests)
+├── test/              Unit dan temporary-SQLite integration test suites (62 unit tests)
 └── scripts/
-    ├── build.sh       Build versioned dan latest local image
-    ├── test-image.sh  Static runtime & container image contract probes
+    ├── build.sh                 Build versioned dan latest image (mendukung enterprise registry)
+    ├── registry-login-helper.sh Isolated enterprise registry login helper
+    ├── test-image.sh            Static runtime & container image contract probes
     ├── test-image-component.sh  Disposable HTTPS/SQLite/signal tests
-    └── validate.sh    Static validation tanpa network/container
+    └── validate.sh              Static validation tanpa network/container
 ```
 
 ---
@@ -385,7 +407,7 @@ tomcat-diagnostic-service/
 PATH="$PATH:/home/eddywiyatno/.cache/opencode/bin" ./scripts/validate.sh
 ```
 
-### 2. Unit & Integration Tests (54 Tests)
+### 2. Unit & Integration Tests (62 Tests)
 ```bash
 podman run --rm --userns=keep-id -v $(pwd):/app:Z -w /app localhost/nodejs:24.18.0 npm test
 ```
@@ -403,6 +425,7 @@ podman run --rm --userns=keep-id -v $(pwd):/app:Z -w /app localhost/nodejs:24.18
 | Komponen & Kapabilitas | Status | Catatan Verifikasi |
 | :--- | :---: | :--- |
 | **Repository Governance & Boundaries** | ✅ Selesai | Pinned toolchain, ESM, no-framework |
+| **Enterprise Registry Integration** | ✅ Selesai | Zero-logic dynamic tagging, TLS flag, authfile isolation |
 | **Alertmanager Ingestion & Queue** | ✅ Selesai | Webhook v4, deduplikasi, kapasitas 50 |
 | **Target Isolation & Evidence Adapters**| ✅ Selesai | Allowlist targets, anti-traversal, bounded log/spool |
 | **SQLite Persistence & Migrations** | ✅ Selesai | 6 migration files, zero-data loss |
@@ -413,12 +436,14 @@ podman run --rm --userns=keep-id -v $(pwd):/app:Z -w /app localhost/nodejs:24.18
 | **Notification Lifecycle & Bounded Retry**| ✅ Selesai | Exponential retry, suppression, material update guard |
 | **SMTP Delivery & Resolved Correlation**| ✅ Selesai | Clean HTML/Text 7-section reports, Mailpit integration |
 | **Persistent Lab Deployment** | ✅ Selesai | Aktif di `devops-lab` container network (v0.1.5) |
-| **Automated Verification Suites** | ✅ Selesai | 100% lulus pada 54 unit test & end-to-end suites |
+| **Automated Verification Suites** | ✅ Selesai | 100% lulus pada 62 unit test & end-to-end suites |
 
 ---
 
 ## 📖 Dokumentasi Terkait
 
+* **TN-010 Enterprise Container Registry Integration:** [`devops-handbook/.../TN-010-implement-plug-and-play-container-registry-integration.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/engineering-journal/continuous-integration-and-deployment/TN-010-implement-plug-and-play-container-registry-integration.md)
+* **Enterprise Registry Migration Guide:** [`devops-handbook/.../enterprise-container-registry-migration-guide.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/operations/enterprise-container-registry-migration-guide.md)
 * **Target and Evidence Contract:** [`devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/target-and-evidence-contract.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/target-and-evidence-contract.md)
 * **Rule Specification & Decision Matrix:** [`devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/tomcat-down-rule-specification.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/tomcat-down-rule-specification.md)
 * **Alertmanager Webhook Contract:** [`devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/alertmanager-webhook-contract.md`](file:///home/eddywiyatno/git/devops-handbook/docs/projects/tomcat-monitoring/diagnostic-mvp/alertmanager-webhook-contract.md)
