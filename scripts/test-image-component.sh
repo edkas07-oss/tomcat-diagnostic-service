@@ -40,55 +40,66 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 # shellcheck source=../CONFIG
 source "${PROJECT_ROOT}/CONFIG"
+source "${SCRIPT_DIR}/container-runtime-helper.sh"
 version="$(<"${PROJECT_ROOT}/VERSION")"
 image="${IMAGE_NAME}:${version}"
 container_name="tomcat-diagnostic-tn010-component"
 
 cleanup_container() {
-    if podman container exists "${container_name}"; then
-        podman rm --force "${container_name}" >/dev/null
+    if container_exists "${container_name}"; then
+        "${CONTAINER_ENGINE}" rm --force "${container_name}" >/dev/null
     fi
 }
 trap cleanup_container EXIT
 
-podman container exists "${container_name}" \
+container_exists "${container_name}" \
     && { echo "Container target sudah ada: ${container_name}" >&2; exit 1; }
 
-podman run --rm \
-    --userns=keep-id \
-    --volume "${PROJECT_ROOT}:/app:ro,Z" \
-    --volume "${component_directory}:/runtime:Z" \
+userns_flag="$(get_userns_flag)"
+vol_ro_z="$(get_volume_flag "ro,Z")"
+vol_z="$(get_volume_flag "Z")"
+
+run_base_args=()
+if [[ -n "${userns_flag}" ]]; then
+    run_base_args+=("${userns_flag}")
+fi
+
+"${CONTAINER_ENGINE}" run --rm \
+    "${run_base_args[@]}" \
+    --volume "${PROJECT_ROOT}:/app${vol_ro_z}" \
+    --volume "${component_directory}:/runtime${vol_z}" \
     --workdir /app \
     localhost/nodejs:24.18.0 \
     node test/component/image-runtime-fixture.js /runtime
 
-podman run --detach \
-    --userns=keep-id \
+"${CONTAINER_ENGINE}" run --detach \
+    "${run_base_args[@]}" \
     --name "${container_name}" \
     --publish 127.0.0.1::8443 \
-    --volume "${component_directory}:/run/tomcat-diagnostic:Z" \
+    --volume "${component_directory}:/run/tomcat-diagnostic${vol_z}" \
     "${image}" >/dev/null
 
-host_port="$(podman port "${container_name}" 8443/tcp | sed -n '1s/.*://p')"
+host_port="$("${CONTAINER_ENGINE}" port "${container_name}" 8443/tcp | sed -n '1s/.*://p')"
 [[ "${host_port}" =~ ^[0-9]+$ ]]
 
-podman run --rm \
-    --userns=keep-id \
+"${CONTAINER_ENGINE}" run --rm \
+    "${run_base_args[@]}" \
     --network host \
-    --volume "${PROJECT_ROOT}:/app:ro,Z" \
-    --volume "${component_directory}:/runtime:ro,Z" \
+    --volume "${PROJECT_ROOT}:/app${vol_ro_z}" \
+    --volume "${component_directory}:/runtime${vol_ro_z}" \
     --workdir /app \
     --env "TN010_HTTPS_PORT=${host_port}" \
     localhost/nodejs:24.18.0 \
     node test/component/image-runtime-probe.js /runtime/server.crt
 
-podman stop --time 5 "${container_name}" >/dev/null
-[[ "$(podman inspect "${container_name}" --format '{{.State.ExitCode}}')" == "0" ]]
+"${CONTAINER_ENGINE}" stop --time 5 "${container_name}" >/dev/null
+[[ "$("${CONTAINER_ENGINE}" inspect "${container_name}" --format '{{.State.ExitCode}}')" == "0" ]]
 
-podman run --rm \
-    --userns=keep-id \
-    --volume "${PROJECT_ROOT}:/app:ro,Z" \
-    --volume "${component_directory}:/runtime:Z" \
+"${CONTAINER_ENGINE}" run --rm \
+    "${run_base_args[@]}" \
+    --volume "${PROJECT_ROOT}:/app${vol_ro_z}" \
+    --volume "${component_directory}:/runtime${vol_z}" \
     --workdir /app \
     localhost/nodejs:24.18.0 \
     node test/component/image-runtime-database-probe.js /runtime/diagnostic.sqlite
+

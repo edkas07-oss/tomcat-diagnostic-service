@@ -103,10 +103,12 @@ required_files=(
     src/server/http-service.js
     src/main.js
     scripts/build.sh
+    scripts/container-runtime-helper.sh
     scripts/test-image.sh
     scripts/test-image-component.sh
     scripts/validate.sh
 )
+
 
 for required_file in "${required_files[@]}"; do
     require_file "${required_file}"

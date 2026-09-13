@@ -38,6 +38,7 @@ PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 
 # shellcheck source=../CONFIG
 source "${PROJECT_ROOT}/CONFIG"
+source "${SCRIPT_DIR}/container-runtime-helper.sh"
 
 project_name="$(<"${PROJECT_ROOT}/PROJECT")"
 project_version="$(<"${PROJECT_ROOT}/VERSION")"
@@ -49,14 +50,14 @@ PUSH_IMAGE="${PUSH_IMAGE:-false}"
 TARGET_IMAGE="${REGISTRY_HOST}/${project_name}:${IMAGE_TAG}"
 LATEST_IMAGE="${REGISTRY_HOST}/${project_name}:latest"
 
-podman image exists "${BASE_IMAGE}" \
+image_exists "${BASE_IMAGE}" \
     || { echo "Base image immutable tidak tersedia: ${BASE_IMAGE}" >&2; exit 1; }
 
-actual_base_id="$(podman image inspect "${BASE_IMAGE}" --format '{{.Id}}')"
+actual_base_id="$("${CONTAINER_ENGINE}" image inspect "${BASE_IMAGE}" --format '{{.Id}}')"
 [[ "${actual_base_id}" == "${BASE_IMAGE_ID}" ]] \
     || { echo "Base image ID tidak cocok dengan CONFIG" >&2; exit 1; }
 
-podman build \
+"${CONTAINER_ENGINE}" build \
     --file "${PROJECT_ROOT}/Containerfile" \
     --tag "${TARGET_IMAGE}" \
     --tag "${LATEST_IMAGE}" \
@@ -68,6 +69,7 @@ podman build \
 
 if [[ "${PUSH_IMAGE}" == "true" ]]; then
     echo "Mendorong image ke container registry: ${TARGET_IMAGE} & ${LATEST_IMAGE}"
-    podman push "${TARGET_IMAGE}"
-    podman push "${LATEST_IMAGE}"
+    "${CONTAINER_ENGINE}" push "${TARGET_IMAGE}"
+    "${CONTAINER_ENGINE}" push "${LATEST_IMAGE}"
 fi
+

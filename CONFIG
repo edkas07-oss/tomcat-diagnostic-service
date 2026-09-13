@@ -16,3 +16,7 @@ BASE_IMAGE_ID=bccb45bc1e48a07ac6c2cd36f7352bccb555e8b3e6070cbefa727d83d6dee3bc
 # Nilai bawaan storage volume runtime lokal
 DATA_VOLUME=diagnostic_data
 LOG_VOLUME=tomcat_logs
+
+# Container engine override (optional: podman / docker)
+CONTAINER_ENGINE="${CONTAINER_ENGINE:-}"
+
