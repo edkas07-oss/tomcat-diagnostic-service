@@ -112,10 +112,14 @@ export function sections(result) {
   const isResolved = result.lifecycleStatus === "resolved";
   const severity = (result.event?.labels?.severity || (result.ruleId === "TomcatDown" ? "critical" : "warning")).toUpperCase();
   const confidenceStr = result.assessment?.confidence ? `; confidence=${result.assessment.confidence}` : "";
+  const host = result.event?.labels?.host || result.targetId?.split("/")[1] || "tomcat-01";
+  const tomcatInstance = result.event?.labels?.tomcat_instance || result.targetId?.split("/")[2] || "default";
 
   const alertSummary = [
     `Nama Alert: ${result.ruleId} (Tingkat Keparahan: ${severity})`,
     `Status Siklus: ${isResolved ? "RESOLVED (PULIH)" : "FIRING (AKTIF)"}`,
+    `Host: ${host}`,
+    `Tomcat Instance: ${tomcatInstance}`,
     `Target Identitas: ${result.targetId}`,
     `Fingerprint: ${result.fingerprint}`,
     `Waktu Mulai Insiden: ${result.startsAt || "tidak_tersedia"}`,
@@ -157,6 +161,8 @@ export function renderResult(result) {
   const content = sections(result);
   const isResolved = result.lifecycleStatus === "resolved";
   const severity = (result.event?.labels?.severity || (result.ruleId === "TomcatDown" ? "critical" : "warning")).toUpperCase();
+  const host = result.event?.labels?.host || result.targetId?.split("/")[1] || "tomcat-01";
+  const tomcatInstance = result.event?.labels?.tomcat_instance || result.targetId?.split("/")[2] || "default";
   const statusColor = isResolved ? "#2e7d32" : (severity === "WARNING" ? "#e65100" : "#c62828");
   const statusBg = isResolved ? "#e8f5e9" : (severity === "WARNING" ? "#fff3e0" : "#ffebee");
   const statusBorder = isResolved ? "#a5d6a7" : (severity === "WARNING" ? "#ffcc80" : "#ef9a9a");
@@ -193,11 +199,12 @@ export function renderResult(result) {
                   <td align="right" style="font-size:12px;font-weight:600;background-color:rgba(255,255,255,0.2);padding:4px 10px;border-radius:12px;color:#ffffff;">LAB Environment</td>
                 </tr>
                 <tr>
-                  <td colspan="2" style="font-size:22px;font-weight:bold;color:#ffffff;padding-top:8px;">${escapeHtml(result.ruleId)} &bull; ${escapeHtml(result.targetId)}</td>
+                  <td colspan="2" style="font-size:22px;font-weight:bold;color:#ffffff;padding-top:8px;">${escapeHtml(result.ruleId)} &bull; ${escapeHtml(host)} / ${escapeHtml(tomcatInstance)} (Target: ${escapeHtml(result.targetId)})</td>
                 </tr>
               </table>
             </td>
           </tr>
+
           <!-- Main Content -->
           <tr>
             <td style="padding:24px;">

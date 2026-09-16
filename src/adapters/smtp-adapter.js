@@ -32,12 +32,16 @@ export class SmtpAdapter {
   async send(result, rendered) {
     const isResolved = result.lifecycleStatus === "resolved";
     const env = (result.targetId?.split("/")[0] || "lab").toUpperCase();
+    const host = result.event?.labels?.host || result.targetId?.split("/")[1] || "tomcat-01";
+    const tomcatInstance = result.event?.labels?.tomcat_instance || result.targetId?.split("/")[2] || "default";
     const alertName = result.ruleId || "TomcatDown";
     const severity = (result.event?.labels?.severity || (alertName === "TomcatDown" ? "critical" : "warning")).toUpperCase();
     const prefix = isResolved ? "[RESOLVED]" : `[${severity}]`;
+    const targetLabel = (host && tomcatInstance) ? ` (${host} / ${tomcatInstance})` : "";
     const subject = isResolved
-      ? `${prefix} [${env}] Tomcat Service: ${alertName} Restored (Target: ${result.targetId})`
-      : `${prefix} [${env}] Tomcat Service: ${alertName} (Target: ${result.targetId})`;
+      ? `${prefix} [${env}] Tomcat Service${targetLabel}: ${alertName} Restored (Target: ${result.targetId})`
+      : `${prefix} [${env}] Tomcat Service${targetLabel}: ${alertName} (Target: ${result.targetId})`;
+
     const priority = (!isResolved && severity === "CRITICAL") ? "1" : "3";
     const headers = {
       "Auto-Submitted": "auto-generated",

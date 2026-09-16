@@ -44,5 +44,5 @@ test("SMTP adapter sets normal priority for resolved and non-critical alerts", a
   }, { text: "restored text", html: "<p>restored</p>" });
   const message = info.message.toString();
   assert.ok(message.includes("X-Priority: 3"));
-  assert.ok(message.includes("[RESOLVED] [LAB] Tomcat Service: TomcatDown Restored"));
+  assert.ok(message.includes("[RESOLVED] [LAB] Tomcat Service (host / one): TomcatDown Restored"));
 });
