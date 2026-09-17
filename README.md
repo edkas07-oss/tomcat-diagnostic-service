@@ -1,12 +1,27 @@
-# Tomcat Diagnostic Service — Autonomous Diagnostic Engine & Decision Authority
+# 🚀 Tomcat Diagnostic Service — Autonomous Diagnostic Engine & Decision Authority
 
-[![Node.js Version](https://img.shields.io/badge/node-24.18.0_LTS-green.svg)](https://nodejs.org)
-[![Architecture](https://img.shields.io/badge/architecture-Deterministic_Multi--Domain-blue.svg)](README.md)
-[![License](https://img.shields.io/badge/license-Proprietary_&_Confidential-red.svg)](LICENSE)
+[![Node.js Version](https://img.shields.io/badge/Node.js-24.18.0_LTS-green.svg)](https://nodejs.org)
+[![Architecture](https://img.shields.io/badge/Architecture-Deterministic_Multi--Domain-blue.svg)](README.md)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Security](https://img.shields.io/badge/Security-Zero%20Auto--Remediation-purple.svg)](CONFIG)
 
 **Tomcat Diagnostic Service** serves as the core **Autonomous Diagnostic Engine and Decision Authority** for the Tomcat Monitoring & Diagnostics platform. It ingests runtime incident and availability alerts from Alertmanager over HTTPS, deterministically correlates multi-source evidence (*catalina.out* logs, crash dumps, container lifecycle spool events, and Prometheus telemetry), evaluates failure patterns against a **Declarative Rulepack Engine**, persists incident states within an embedded SQLite database, and dispatches structured 7-section diagnostic reports with actionable SOP recommendations via SMTP.
 
 The service is engineered under strict principles of **Deterministic Honesty** and **Human-in-the-Loop Governance** — the platform never performs unverified automatic remediation or arbitrary container mutations ([TM-ADR-0014](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0014.md)).
+
+---
+
+## 📑 Table of Contents
+
+- [🏛️ Architecture & Incident Triage Pipeline](#️-architecture--incident-triage-pipeline)
+- [🚀 Key Capabilities & Design Invariants](#-key-capabilities--design-invariants)
+- [📑 Failure Domain Taxonomy (8 Standard Domains)](#-failure-domain-taxonomy-8-standard-domains)
+- [📊 Canonical 7-Section Diagnostic Incident Report](#-canonical-7-section-diagnostic-incident-report)
+- [🌐 Consolidated REST API Reference](#-consolidated-rest-api-reference)
+- [⚙️ Configuration Contracts & Runtime Parameters](#️-configuration-contracts--runtime-parameters)
+- [🧪 Validation & Automated Testing](#-validation--automated-testing)
+- [📂 Repository Structure](#-repository-structure)
+- [📄 License, Ownership & Disclaimer](#-license-ownership--disclaimer)
 
 ---
 
@@ -175,37 +190,43 @@ podman run --rm --userns=keep-id -v $(pwd):/app:Z -w /app localhost/nodejs:24.18
 
 ```text
 tomcat-diagnostic-service/
-├── AGENTS.md                 Governance principles and repository boundaries
-├── CONFIG                    Toolchain metadata and default storage volumes
-├── CONFIG.example            Enterprise container registry configuration template
-├── Containerfile             Digest-pinned OCI container definition
-├── LICENSE                   Intellectual property and proprietary license
-├── PROJECT                   Script-readable project identifier
-├── README.md                 Technical specification and architecture guide
-├── VERSION                   Semantic version release
-├── package.json              ESM package contract and exact-pinned dependencies
-├── config/schemas/           JSON Schema contracts:
+├── AGENTS.md                  Governance principles and repository boundaries
+├── CONFIG                     Toolchain metadata and default storage volumes
+├── CONFIG.example             Enterprise container registry configuration template
+├── Containerfile              Digest-pinned OCI container definition
+├── LICENSE                    Apache License 2.0
+├── PROJECT                    Script-readable project identifier
+├── README.md                  Technical specification and architecture guide
+├── VERSION                    Semantic version release
+├── package.json               ESM package contract and exact-pinned dependencies
+├── config/schemas/            JSON Schema contracts:
 │   ├── alertmanager-webhook-v4.schema.json
 │   ├── application-config-v1.schema.json
 │   └── rulepack-v1.schema.json
-├── migrations/               Forward-only SQLite schema migrations (001 .. 007)
-├── src/                      Application source code:
-│   ├── adapters/             SQLite repository, SMTP client, Evidence adapters
-│   ├── application/          Diagnostic worker, Result renderer, Notification orchestrator
-│   ├── domain/               Multi-Domain Dispatcher, Decision Engines, Rulepack evaluator
-│   └── server/               HTTPS server, Bearer auth, Routes, Schema validators
-├── test/                     Unit and temporary SQLite integration test suites
+├── migrations/                Forward-only SQLite schema migrations (001 .. 007)
+├── src/                       Application source code:
+│   ├── adapters/              SQLite repository, SMTP client, Evidence adapters
+│   ├── application/           Diagnostic worker, Result renderer, Notification orchestrator
+│   ├── domain/                Multi-Domain Dispatcher, Decision Engines, Rulepack evaluator
+│   └── server/                HTTPS server, Bearer auth, Routes, Schema validators
+├── test/                      Unit and temporary SQLite integration test suites
 └── scripts/
-    ├── build.sh              Build versioned and latest container images
+    ├── build.sh               Build versioned and latest container images
     ├── registry-login-helper.sh  Isolated enterprise registry authentication helper
-    ├── test-image.sh         Container runtime contract verification
-    └── validate.sh           Static validation without network dependencies
+    ├── test-image.sh          Container runtime contract verification
+    └── validate.sh            Static validation without network dependencies
 ```
 
 ---
 
-## 👤 Author & Maintainer
+## 📄 License, Ownership & Disclaimer
 
-- **Lead Engineer & Architect:** Eddy Wiyatno (<edkas07@gmail.com>)
-- **Role:** Senior DevOps & Reliability Engineer
-- **Project:** Tomcat Monitoring & Diagnostics Platform
+### 👤 Author & Ownership
+This repository, along with its associated architectures, automation components, and codebases, is designed, authored, and maintained by **Eddy Wiyatno** ([@edkas07-oss](https://github.com/edkas07-oss)).
+
+### ⚖️ License
+This project is licensed under the [Apache License 2.0](LICENSE) - see the [LICENSE](LICENSE) file for complete terms and conditions.
+
+### 🛡️ Research & Development Disclaimer
+> [!NOTE]
+> All research, development, architectural design, prototyping, test fixtures, and validation suites in this repository were conducted and verified exclusively within **independent, personal laboratory environments** using personal hardware, network infrastructure, and self-hosted tooling. No confidential corporate assets, proprietary production data, or third-party enterprise infrastructure were utilized in the creation or publication of this project.
