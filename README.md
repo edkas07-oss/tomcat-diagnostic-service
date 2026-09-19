@@ -15,6 +15,7 @@ The service is engineered under strict principles of **Deterministic Honesty** a
 
 - [🏛️ Architecture & Incident Triage Pipeline](#️-architecture--incident-triage-pipeline)
 - [🚀 Key Capabilities & Design Invariants](#-key-capabilities--design-invariants)
+- [📦 Installation & Deployment Guide](INSTALL.md)
 - [📑 Failure Domain Taxonomy (8 Standard Domains)](#-failure-domain-taxonomy-8-standard-domains)
 - [📊 Canonical 7-Section Diagnostic Incident Report](#-canonical-7-section-diagnostic-incident-report)
 - [🌐 Consolidated REST API Reference](#-consolidated-rest-api-reference)
@@ -77,6 +78,20 @@ flowchart TD
    - *Tier 2 (Host Workspace `tm-home`):* Configurations (`application.json`, `targets.json`), secrets (`bearer-token`), TLS certificates (`server.crt`, `server.key`), and the Restricted Collector Spool (`spool/`).
 6. **Resilient Notification Delivery & Lifecycle Orchestration:** Single worker loop with 60s processing deadline, bounded exponential backoff retries (1s and 5s, max 3 attempts), identical-result alert suppression, material update guards (max 1 update per incident), and resolved state correlation ([TM-ADR-0016](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0016.md)).
 7. **Embedded SQLite State Engine:** Forward-only migrations (`001` .. `007`), automated Stale Lock Recovery (restoring interrupted in-flight queue items post-restart), bounded crash loop prevention, and Foreign-Key Safe Retention Pruning with Incremental Vacuuming ([TM-ADR-0013](file:///home/eddywiyatno/git/devops-handbook/docs/adr/tomcat-monitoring/adr-records/TM-ADR-0013.md)).
+
+---
+
+## 📦 Installation & Deployment
+
+For complete image build instructions, two-tier volume configurations, secret injections, and standalone/fleet deployment steps, refer to the dedicated [**`INSTALL.md`**](INSTALL.md) guide.
+
+```bash
+# Build local OCI image
+./scripts/build.sh
+
+# Deploy via tmctl operator CLI
+tmctl stack deploy --target diagnostic
+```
 
 ---
 
